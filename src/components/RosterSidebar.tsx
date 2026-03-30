@@ -1,4 +1,5 @@
 import type { Tribute } from '../engine/types'
+import { it } from '../i18n/it'
 
 interface RosterSidebarProps {
   allTributes: Tribute[]
@@ -19,7 +20,7 @@ export default function RosterSidebar({ allTributes, alive }: RosterSidebarProps
 
   return (
     <aside className="roster-sidebar">
-      <h3>Tributes</h3>
+      <h3>{it.rosterSidebar}</h3>
       {allTributes.map((tribute, i) => {
         const isDead = !aliveSet.has(tribute)
         return (

@@ -24,6 +24,9 @@ export interface KillLimitConfig {
   max: number
   /** When mode is random: hard cap on deaths this phase; 0 = no cap */
   randomModeDeathCap?: number
+  /** Each phase ends after this many scenes (random between min and max inclusive). */
+  eventsPerPhaseMin?: number
+  eventsPerPhaseMax?: number
 }
 
 const char_zero = '0'.charCodeAt(0)
@@ -136,7 +139,8 @@ function parsePronounSetting(option: PronounSetting, customStr?: string): {
     case 'other': {
       const str = (customStr ?? '').replaceAll('//', '\x1f')
       const parts = str.split('/').map((x) => x.replaceAll('\x1f', '//').trim())
-      if (parts.length < 4) throw new Error('Custom pronouns must be nom/acc/gen/reflx')
+      if (parts.length < 4)
+        throw new Error('Pronomi personalizzati: usa nom/acc/gen/riflessivo separati da /')
       return {
         pronouns: { nominative: parts[0], accusative: parts[1], genitive: parts[2], reflexive: parts[3] },
         uses_pronouns: true, plural: false,
@@ -208,6 +212,8 @@ export class Game {
   readonly event_list: GameEventList
   readonly killLimit: KillLimitConfig
   readonly randomModeDeathCap: number
+  readonly eventsPerPhaseMin: number
+  readonly eventsPerPhaseMax: number
 
   constructor(
     tributes: Tribute[],
@@ -220,6 +226,13 @@ export class Game {
     this.fatality_reroll_rate = fatality_reroll_rate
     this.killLimit = killLimit ?? { mode: 'random', value: 1, min: 0, max: 3 }
     this.randomModeDeathCap = killLimit?.randomModeDeathCap ?? 0
+    let eMin = killLimit?.eventsPerPhaseMin ?? 4
+    let eMax = killLimit?.eventsPerPhaseMax ?? 10
+    eMin = Math.max(1, Math.min(eMin, 80))
+    eMax = Math.max(1, Math.min(eMax, 80))
+    if (eMin > eMax) [eMin, eMax] = [eMax, eMin]
+    this.eventsPerPhaseMin = eMin
+    this.eventsPerPhaseMax = eMax
     this.event_list = { bloodbath: [], day: [], night: [], feast: [] }
     this.addEvents(events)
   }
@@ -357,6 +370,7 @@ export class Game {
     if (!eventList.length) return
     let diedThisRound = 0
     const deathCap = this.getDeathCapForRound()
+    const targetEventCount = random(this.eventsPerPhaseMin, this.eventsPerPhaseMax + 1)
 
     outer: while (tributesLeft) {
       const tributes_involved: Tribute[] = []
@@ -391,6 +405,8 @@ export class Game {
       }
       gameEvent.message = composeEventMessage(gameEvent)
       round.game_events.push(gameEvent)
+
+      if (round.game_events.length >= targetEventCount) break outer
 
       if (tributesAlive < 2) break
       if (deathCap >= 0 && diedThisRound >= deathCap) break
@@ -471,7 +487,7 @@ export class Game {
   static createTributes(options: TributeCharacterSelectOptions[]): Tribute[] | Error {
     try {
       return options.map((character) => {
-        if (character.name === '') throw Error('Character name must not be empty!')
+        if (character.name === '') throw Error('Il nome del personaggio non può essere vuoto!')
         const pronouns = parsePronounSetting(character.pronoun_option, character.custom_pronouns)
         return new Tribute(character.name, {
           pronouns: pronouns.pronouns,

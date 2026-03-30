@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react'
-import { RenderState, titleCase, type GameRenderStateData } from '../engine/types'
+import { RenderState, type GameRenderStateData } from '../engine/types'
+import { formatRoundDeathHeader, it, translateGameTitle } from '../i18n/it'
 import EventCard from './EventCard'
 
 interface BroadcastStageProps {
@@ -7,6 +8,8 @@ interface BroadcastStageProps {
   eventIndex: number
   onEventIndexChange: (index: number) => void
   onAdvanceGame?: () => void
+  /** Jump to the next in-game morning (skips remaining advances until `days_passed` increments). */
+  onSkipToNextDay?: () => void
 }
 
 function getInitials(name: string) {
@@ -18,14 +21,26 @@ function getInitials(name: string) {
     .toUpperCase()
 }
 
+function StageNextButton({ onAdvance }: { onAdvance?: () => void }) {
+  return (
+    <div className="stage-continue-nav">
+      <button type="button" className="btn btn-primary event-nav-btn" onClick={() => onAdvance?.()} disabled={!onAdvance}>
+        {it.stageNext}
+      </button>
+    </div>
+  )
+}
+
 export default function BroadcastStage({
   renderState,
   eventIndex,
   onEventIndexChange,
   onAdvanceGame,
+  onSkipToNextDay,
 }: BroadcastStageProps) {
   const { state, game_title, rounds, tributes_died, tributes_alive } = renderState
 
+  const title = translateGameTitle(game_title)
   const currentRound = rounds[rounds.length - 1]
   const totalEvents = currentRound?.game_events.length ?? 0
   const isLastEvent = totalEvents > 0 && eventIndex >= totalEvents - 1
@@ -66,13 +81,33 @@ export default function BroadcastStage({
     return () => window.removeEventListener('keydown', handleKey)
   }, [state, onAdvanceGame, goPrevEvent, goNextEvent, isLastEvent, hasNoEvents])
 
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      const skipStates = [
+        RenderState.ROUND_DEATHS,
+        RenderState.WINNERS,
+        RenderState.GAME_DEATHS,
+        RenderState.STATS,
+      ]
+      if (!skipStates.includes(state) || !onAdvanceGame) return
+      const t = e.target as HTMLElement
+      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        onAdvanceGame()
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [state, onAdvanceGame])
+
   if (state === RenderState.ROUND_EVENTS) {
     const currentEvent = currentRound?.game_events[eventIndex]
 
     return (
       <div className="center-stage fullscreen-stage">
         <div className="round-banner round-banner-compact">
-          <h2>{game_title}</h2>
+          <h2>{title}</h2>
           <div className="round-counter">
             {hasNoEvents ? '—' : `${eventIndex + 1} / ${totalEvents}`}
           </div>
@@ -84,19 +119,21 @@ export default function BroadcastStage({
           )}
           {hasNoEvents && (
             <div className="arena-card arena-card-fullscreen arena-card-empty-round">
-              <p className="arena-event-text arena-event-text-lg">No events this phase.</p>
+              <p className="arena-event-text arena-event-text-lg">{it.noEventsPhase}</p>
             </div>
           )}
         </div>
 
-        <div className="event-nav">
+        <div
+          className={`event-nav${isLastEvent || hasNoEvents ? ' event-nav-phase-ready' : ''}`}
+        >
           <button
             type="button"
             className="btn btn-secondary event-nav-btn"
             onClick={goPrevEvent}
             disabled={eventIndex === 0 || hasNoEvents}
           >
-            &larr; Prev
+            {it.prevScene}
           </button>
           <div className="event-nav-dots">
             {!hasNoEvents &&
@@ -112,22 +149,35 @@ export default function BroadcastStage({
               ))}
           </div>
           {isLastEvent || hasNoEvents ? (
-            <button
-              type="button"
-              className="btn btn-primary event-nav-btn event-nav-continue"
-              onClick={() => onAdvanceGame?.()}
-              disabled={!onAdvanceGame}
-            >
-              Continue &rarr;
-            </button>
+            <div className="event-nav-end-actions">
+              <button
+                type="button"
+                className="btn btn-primary event-nav-btn event-nav-btn-phase"
+                onClick={() => onAdvanceGame?.()}
+                disabled={!onAdvanceGame}
+              >
+                {it.nextPhase}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary event-nav-btn"
+                onClick={() => onSkipToNextDay?.()}
+                disabled={!onSkipToNextDay}
+                title={it.nextDayTitle}
+              >
+                {it.nextDay}
+              </button>
+            </div>
           ) : (
             <button type="button" className="btn btn-secondary event-nav-btn" onClick={goNextEvent}>
-              Next &rarr;
+              {it.nextScene}
             </button>
           )}
         </div>
 
-        <p className="event-nav-hint">[ and ] to browse scenes · Enter continues after the last one</p>
+        <p className="event-nav-hint">
+          {isLastEvent || hasNoEvents ? it.eventNavHintEnd : it.eventNavHintScenes}
+        </p>
       </div>
     )
   }
@@ -136,12 +186,12 @@ export default function BroadcastStage({
     return (
       <div className="center-stage fullscreen-stage">
         <div className="death-summary">
-          <h3>{game_title}</h3>
+          <h3>{title}</h3>
           {tributes_died.length > 0 ? (
             <>
               <div className="cannon-count">{tributes_died.length}</div>
               <div className="cannon-label">
-                Cannon Shot{tributes_died.length !== 1 ? 's' : ''}
+                {it.cannonShots(tributes_died.length)}
               </div>
               <div className="death-portraits">
                 {tributes_died.map((tribute, i) => (
@@ -159,9 +209,10 @@ export default function BroadcastStage({
               </div>
             </>
           ) : (
-            <p className="no-deaths-msg">No cannon shots can be heard in the distance.</p>
+            <p className="no-deaths-msg">{it.noCannonHeard}</p>
           )}
         </div>
+        <StageNextButton onAdvance={onAdvanceGame} />
       </div>
     )
   }
@@ -171,9 +222,7 @@ export default function BroadcastStage({
       <div className="center-stage fullscreen-stage">
         <div className="winner-screen">
           <h2>
-            {tributes_alive.length > 0
-              ? 'The Games Have Ended'
-              : 'No Victors Remain'}
+            {tributes_alive.length > 0 ? it.gamesEnded : it.noVictorsRemain}
           </h2>
           <div className="winner-portraits">
             {tributes_alive.map((tribute, i) => (
@@ -187,12 +236,13 @@ export default function BroadcastStage({
                 </div>
                 <span className="winner-name">{tribute.raw_name}</span>
                 <span className="winner-kills">
-                  {tribute.kills} Kill{tribute.kills !== 1 ? 's' : ''}
+                  {it.kills(tribute.kills)}
                 </span>
               </div>
             ))}
           </div>
         </div>
+        <StageNextButton onAdvance={onAdvanceGame} />
       </div>
     )
   }
@@ -201,7 +251,7 @@ export default function BroadcastStage({
     return (
       <div className="center-stage fullscreen-stage">
         <div className="round-banner">
-          <h2>{game_title}</h2>
+          <h2>{title}</h2>
           <div className="round-divider" />
         </div>
         <div className="game-deaths-section">
@@ -211,7 +261,7 @@ export default function BroadcastStage({
             return (
               <div key={i} className="round-death-group">
                 <div className="round-death-header">
-                  Round {i + 1}: {titleCase(round.stage)}
+                  {formatRoundDeathHeader(i, round.stage)}
                 </div>
                 {fatalEvents.map((event, j) => (
                   <EventCard key={j} event={event} index={j} />
@@ -220,6 +270,7 @@ export default function BroadcastStage({
             )
           })}
         </div>
+        <StageNextButton onAdvance={onAdvanceGame} />
       </div>
     )
   }
@@ -229,7 +280,7 @@ export default function BroadcastStage({
     return (
       <div className="center-stage fullscreen-stage">
         <div className="round-banner">
-          <h2>{game_title}</h2>
+          <h2>{title}</h2>
           <div className="round-divider" />
         </div>
         <div className="stats-section">
@@ -253,8 +304,8 @@ export default function BroadcastStage({
                     <div className="stat-card-name">{tribute.raw_name}</div>
                     <div className="stat-card-detail">
                       {isWinner
-                        ? 'Victor'
-                        : `Died Round ${(tribute.died_in_round?.index ?? 0) + 1}`}
+                        ? it.victor
+                        : it.diedRound((tribute.died_in_round?.index ?? 0) + 1)}
                     </div>
                   </div>
                   <div className="stat-card-kills">{tribute.kills}</div>
@@ -263,6 +314,7 @@ export default function BroadcastStage({
             })}
           </div>
         </div>
+        <StageNextButton onAdvance={onAdvanceGame} />
       </div>
     )
   }

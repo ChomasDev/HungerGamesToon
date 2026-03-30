@@ -1,4 +1,5 @@
 import type { GameRenderStateData } from '../engine/types'
+import { it } from '../i18n/it'
 
 interface TopBarProps {
   seasonTitle: string
@@ -22,33 +23,33 @@ export default function TopBar({
 
   return (
     <header className="top-bar">
-      <div className="top-bar-logo">Hunger Games</div>
+      <div className="top-bar-logo">{it.topBarLogo}</div>
 
       {showGameControls && renderState ? (
         <>
           <div className="top-bar-stats">
             <div className="stat-item">
-              <span className="stat-label">Alive</span>
+              <span className="stat-label">{it.statAlive}</span>
               <span className="stat-value alive">{alive}</span>
             </div>
             <div className="stat-item">
-              <span className="stat-label">Fallen</span>
+              <span className="stat-label">{it.statFallen}</span>
               <span className="stat-value dead">{dead}</span>
             </div>
           </div>
           <span className="top-bar-title">{seasonTitle}</span>
           <div className="top-bar-actions">
-            <button className="btn-icon" onClick={onSettingsClick} title="Settings">
+            <button className="btn-icon" onClick={onSettingsClick} title={it.settingsTitle}>
               &#9881;
             </button>
             <button className="btn btn-danger" onClick={onAbort}>
-              Abort
+              {it.abort}
             </button>
           </div>
         </>
       ) : (
         <div className="top-bar-actions">
-          <button className="btn-icon" onClick={onSettingsClick} title="Settings">
+          <button className="btn-icon" onClick={onSettingsClick} title={it.settingsTitle}>
             &#9881;
           </button>
         </div>

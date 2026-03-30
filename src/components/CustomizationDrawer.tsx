@@ -1,4 +1,5 @@
 import type { GameSettings, KillsPerRoundMode, ThemeConfig } from '../store/gameStore'
+import { it } from '../i18n/it'
 
 interface CustomizationDrawerProps {
   isOpen: boolean
@@ -7,9 +8,11 @@ interface CustomizationDrawerProps {
   onThemeChange: (updates: Partial<ThemeConfig>) => void
   gameSettings: GameSettings
   onGameSettingsChange: (updates: Partial<GameSettings>) => void
+  /** Clears IndexedDB and resets roster/settings to defaults */
+  onEraseLocalData: () => void | Promise<void>
 }
 
-const presets = ['dark', 'ember', 'neon', 'ice'] as const
+const presets = ['toon', 'dark', 'ember', 'neon', 'ice'] as const
 
 export default function CustomizationDrawer({
   isOpen,
@@ -18,6 +21,7 @@ export default function CustomizationDrawer({
   onThemeChange,
   gameSettings,
   onGameSettingsChange,
+  onEraseLocalData,
 }: CustomizationDrawerProps) {
   if (!isOpen) return null
 
@@ -25,10 +29,10 @@ export default function CustomizationDrawer({
     <>
       <div className="drawer-overlay" onClick={onClose} />
       <div className="drawer">
-        <h2>Customization</h2>
+        <h2>{it.customization}</h2>
 
         <div className="drawer-section">
-          <label>Theme Preset</label>
+          <label>{it.themePreset}</label>
           <div className="theme-presets">
             {presets.map((preset) => (
               <button
@@ -36,15 +40,16 @@ export default function CustomizationDrawer({
                 className={`theme-preset ${theme.preset === preset ? 'active' : ''}`}
                 data-preset={preset}
                 onClick={() => onThemeChange({ preset })}
+                type="button"
               >
-                {preset}
+                {it.themePresetLabels[preset]}
               </button>
             ))}
           </div>
         </div>
 
         <div className="drawer-section">
-          <label>Accent Color</label>
+          <label>{it.accentColor}</label>
           <input
             type="color"
             value={theme.accent}
@@ -54,53 +59,92 @@ export default function CustomizationDrawer({
         </div>
 
         <div className="drawer-section">
-          <label>Motion Level</label>
+          <label>{it.motionLevel}</label>
           <select
             value={theme.motionLevel}
             onChange={(e) => onThemeChange({ motionLevel: e.target.value as 'full' | 'reduced' })}
           >
-            <option value="full">Full Animations</option>
-            <option value="reduced">Reduced Motion</option>
+            <option value="full">{it.motionFull}</option>
+            <option value="reduced">{it.motionReduced}</option>
           </select>
         </div>
 
         <div className="drawer-section">
-          <label>Density</label>
+          <label>{it.density}</label>
           <select
             value={theme.density}
             onChange={(e) => onThemeChange({ density: e.target.value as 'compact' | 'roomy' })}
           >
-            <option value="roomy">Roomy</option>
-            <option value="compact">Compact</option>
+            <option value="roomy">{it.densityRoomy}</option>
+            <option value="compact">{it.densityCompact}</option>
           </select>
         </div>
 
-        <h3 style={{ marginTop: 24, marginBottom: 8 }}>Game Settings</h3>
+        <h3 style={{ marginTop: 24, marginBottom: 8 }}>{it.gameSettings}</h3>
 
         <div className="drawer-section">
-          <label>Kills per Round</label>
+          <label>{it.eventsPerPhaseTitle}</label>
+          <span className="drawer-hint">{it.eventsPerPhaseHint}</span>
+          <label style={{ marginTop: 12, display: 'block' }}>
+            {it.eventsPerPhaseMin(gameSettings.eventsPerPhaseMin)}
+          </label>
+          <input
+            type="range"
+            min={1}
+            max={40}
+            step={1}
+            value={gameSettings.eventsPerPhaseMin}
+            onChange={(e) => {
+              const min = Number(e.target.value)
+              onGameSettingsChange({
+                eventsPerPhaseMin: min,
+                eventsPerPhaseMax: Math.max(min, gameSettings.eventsPerPhaseMax),
+              })
+            }}
+          />
+          <label style={{ marginTop: 12, display: 'block' }}>
+            {it.eventsPerPhaseMax(gameSettings.eventsPerPhaseMax)}
+          </label>
+          <input
+            type="range"
+            min={1}
+            max={40}
+            step={1}
+            value={gameSettings.eventsPerPhaseMax}
+            onChange={(e) => {
+              const max = Number(e.target.value)
+              onGameSettingsChange({
+                eventsPerPhaseMax: max,
+                eventsPerPhaseMin: Math.min(max, gameSettings.eventsPerPhaseMin),
+              })
+            }}
+          />
+        </div>
+
+        <div className="drawer-section">
+          <label>{it.killsPerRound}</label>
           <select
             value={gameSettings.killsPerRoundMode}
             onChange={(e) => onGameSettingsChange({ killsPerRoundMode: e.target.value as KillsPerRoundMode })}
           >
-            <option value="random">Fully Random</option>
-            <option value="exact">Exact Number</option>
-            <option value="range">Random in Range</option>
+            <option value="random">{it.killModeRandom}</option>
+            <option value="exact">{it.killModeExact}</option>
+            <option value="range">{it.killModeRange}</option>
           </select>
           <span className="drawer-hint">
             {gameSettings.killsPerRoundMode === 'random'
-              ? 'Caps below prevent entire rosters from dying in a single day/night. Use 0 for uncapped chaos.'
+              ? it.killHintRandom
               : gameSettings.killsPerRoundMode === 'exact'
-                ? 'Exactly this many deaths per round (0 = peaceful round possible).'
-                : 'A random number of deaths between min and max each round.'}
+                ? it.killHintExact
+                : it.killHintRange}
           </span>
         </div>
 
         {gameSettings.killsPerRoundMode === 'random' && (
           <div className="drawer-section">
             <label>
-              Max deaths per phase:{' '}
-              {gameSettings.randomRoundDeathCap === 0 ? 'Unlimited' : gameSettings.randomRoundDeathCap}
+              {it.maxDeathsPerPhase}:{' '}
+              {gameSettings.randomRoundDeathCap === 0 ? it.unlimited : gameSettings.randomRoundDeathCap}
             </label>
             <input
               type="range"
@@ -111,7 +155,7 @@ export default function CustomizationDrawer({
               onChange={(e) => onGameSettingsChange({ randomRoundDeathCap: Number(e.target.value) })}
             />
             <div className="range-labels">
-              <span>0 — off</span>
+              <span>{it.range0off}</span>
               <span>10</span>
               <span>20</span>
             </div>
@@ -120,7 +164,7 @@ export default function CustomizationDrawer({
 
         {gameSettings.killsPerRoundMode === 'exact' && (
           <div className="drawer-section">
-            <label>Deaths per Round: {gameSettings.killsPerRoundValue}</label>
+            <label>{it.deathsPerRound(gameSettings.killsPerRoundValue)}</label>
             <input
               type="range"
               min={0}
@@ -140,7 +184,7 @@ export default function CustomizationDrawer({
         {gameSettings.killsPerRoundMode === 'range' && (
           <>
             <div className="drawer-section">
-              <label>Min Deaths: {gameSettings.killsPerRoundMin}</label>
+              <label>{it.minDeaths(gameSettings.killsPerRoundMin)}</label>
               <input
                 type="range"
                 min={0}
@@ -157,7 +201,7 @@ export default function CustomizationDrawer({
               />
             </div>
             <div className="drawer-section">
-              <label>Max Deaths: {gameSettings.killsPerRoundMax}</label>
+              <label>{it.maxDeaths(gameSettings.killsPerRoundMax)}</label>
               <input
                 type="range"
                 min={0}
@@ -181,8 +225,25 @@ export default function CustomizationDrawer({
           </>
         )}
 
-        <button className="btn btn-secondary" onClick={onClose} style={{ width: '100%', marginTop: 16 }}>
-          Close
+        <button type="button" className="btn btn-secondary" onClick={onClose} style={{ width: '100%', marginTop: 16 }}>
+          {it.close}
+        </button>
+
+        <p className="drawer-hint" style={{ marginTop: 20 }}>
+          {it.drawerPersistHint}
+        </p>
+        <button
+          type="button"
+          className="btn btn-danger"
+          style={{ width: '100%', marginTop: 8 }}
+          onClick={() => {
+            if (!confirm(it.eraseLocalConfirm)) {
+              return
+            }
+            void Promise.resolve(onEraseLocalData()).then(() => onClose())
+          }}
+        >
+          {it.eraseLocalButton}
         </button>
       </div>
     </>

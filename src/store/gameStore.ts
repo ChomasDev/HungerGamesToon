@@ -1,4 +1,5 @@
 import { useReducer } from 'react'
+import { it } from '../i18n/it'
 import { Game, loadDefaultEvents, loadEventsFromStored, type KillLimitConfig } from '../engine/game'
 import {
   PronounSetting,
@@ -17,7 +18,7 @@ export function makeId(): string {
 export type AppScreen = 'lobby' | 'game' | 'results'
 
 export interface ThemeConfig {
-  preset: 'dark' | 'ember' | 'neon' | 'ice'
+  preset: 'toon' | 'dark' | 'ember' | 'neon' | 'ice'
   accent: string
   motionLevel: 'full' | 'reduced'
   density: 'compact' | 'roomy'
@@ -32,6 +33,9 @@ export interface GameSettings {
   killsPerRoundMax: number
   /** Fully Random only: max deaths per phase; 0 = unlimited */
   randomRoundDeathCap: number
+  /** Random inclusive bounds for how many event scenes play per phase (day/night/etc.). */
+  eventsPerPhaseMin: number
+  eventsPerPhaseMax: number
 }
 
 export interface GameStore {
@@ -48,7 +52,16 @@ export interface GameStore {
   gameSettings: GameSettings
 }
 
+export type HydratePayload = Partial<
+  Pick<
+    GameStore,
+    'tributes' | 'seasonTitle' | 'theme' | 'gameSettings' | 'customEvents' | 'autoPlaySpeed'
+  >
+>
+
 type GameAction =
+  | { type: 'HYDRATE'; payload: HydratePayload }
+  | { type: 'RESET_TO_DEFAULTS' }
   | { type: 'SET_TRIBUTES'; tributes: TributeCharacterSelectOptions[] }
   | { type: 'ADD_TRIBUTE' }
   | { type: 'REMOVE_TRIBUTE'; id: string }
@@ -57,6 +70,8 @@ type GameAction =
   | { type: 'SET_SEASON_TITLE'; title: string }
   | { type: 'START_GAME' }
   | { type: 'ADVANCE_GAME' }
+  /** Advance repeatedly until the in-game calendar day number increases (skip night / cannon / etc. in one jump). */
+  | { type: 'SKIP_TO_NEXT_DAY' }
   | { type: 'ABORT_GAME' }
   | { type: 'SET_ERROR'; error: string | null }
   | { type: 'SET_THEME'; theme: Partial<ThemeConfig> }
@@ -65,45 +80,82 @@ type GameAction =
   | { type: 'SET_CUSTOM_EVENTS'; events: EventList<StoredEvent> | null }
   | { type: 'SET_GAME_SETTINGS'; settings: Partial<GameSettings> }
 
-const defaultTributes: TributeCharacterSelectOptions[] = [
-  { id: makeId(), name: 'District 1', pronoun_option: PronounSetting.Masculine },
-  { id: makeId(), name: 'District 2', pronoun_option: PronounSetting.Feminine },
-  { id: makeId(), name: 'District 3', pronoun_option: PronounSetting.Common },
-  { id: makeId(), name: 'District 4', pronoun_option: PronounSetting.Masculine },
-  { id: makeId(), name: 'District 5', pronoun_option: PronounSetting.Feminine },
-  { id: makeId(), name: 'District 6', pronoun_option: PronounSetting.Common },
-  { id: makeId(), name: 'District 7', pronoun_option: PronounSetting.Masculine },
-  { id: makeId(), name: 'District 8', pronoun_option: PronounSetting.Feminine },
-]
-
-const initialState: GameStore = {
-  screen: 'lobby',
-  tributes: defaultTributes,
-  seasonTitle: 'The 74th Hunger Games',
-  game: null,
-  renderState: null,
-  error: null,
-  theme: {
-    preset: 'dark',
-    accent: '#e63946',
-    motionLevel: 'full',
-    density: 'roomy',
-  },
-  autoPlaySpeed: 2000,
-  isAutoPlaying: false,
-  customEvents: null,
-  gameSettings: {
-    killsPerRoundMode: 'random',
-    killsPerRoundValue: 1,
-    killsPerRoundMin: 0,
-    killsPerRoundMax: 3,
-    randomRoundDeathCap: 5,
-  },
+export function createInitialGameStore(): GameStore {
+  return {
+    screen: 'lobby',
+    tributes: [
+      { id: makeId(), name: 'Distretto 1', pronoun_option: PronounSetting.Masculine },
+      { id: makeId(), name: 'Distretto 2', pronoun_option: PronounSetting.Feminine },
+      { id: makeId(), name: 'Distretto 3', pronoun_option: PronounSetting.Common },
+      { id: makeId(), name: 'Distretto 4', pronoun_option: PronounSetting.Masculine },
+      { id: makeId(), name: 'Distretto 5', pronoun_option: PronounSetting.Feminine },
+      { id: makeId(), name: 'Distretto 6', pronoun_option: PronounSetting.Common },
+      { id: makeId(), name: 'Distretto 7', pronoun_option: PronounSetting.Masculine },
+      { id: makeId(), name: 'Distretto 8', pronoun_option: PronounSetting.Feminine },
+    ],
+    seasonTitle: '74ª Edizione degli Hunger Games',
+    game: null,
+    renderState: null,
+    error: null,
+    theme: {
+      preset: 'toon',
+      accent: '#ff3d5c',
+      motionLevel: 'full',
+      density: 'roomy',
+    },
+    autoPlaySpeed: 2000,
+    isAutoPlaying: false,
+    customEvents: null,
+    gameSettings: {
+      killsPerRoundMode: 'random',
+      killsPerRoundValue: 1,
+      killsPerRoundMin: 0,
+      killsPerRoundMax: 3,
+      randomRoundDeathCap: 5,
+      eventsPerPhaseMin: 4,
+      eventsPerPhaseMax: 10,
+    },
+  }
 }
+
+const initialState: GameStore = createInitialGameStore()
 
 function gameReducer(state: GameStore, action: GameAction): GameStore {
   switch (action.type) {
+    case 'HYDRATE': {
+      const p = action.payload
+      if (p.tributes) {
+        for (const t of state.tributes) {
+          if (t.image_url?.startsWith('blob:')) {
+            URL.revokeObjectURL(t.image_url)
+          }
+        }
+      }
+      return {
+        ...state,
+        tributes: p.tributes ?? state.tributes,
+        seasonTitle: p.seasonTitle ?? state.seasonTitle,
+        theme: p.theme ? { ...state.theme, ...p.theme } : state.theme,
+        gameSettings: p.gameSettings ? { ...state.gameSettings, ...p.gameSettings } : state.gameSettings,
+        customEvents: p.customEvents !== undefined ? p.customEvents : state.customEvents,
+        autoPlaySpeed: p.autoPlaySpeed ?? state.autoPlaySpeed,
+      }
+    }
+
+    case 'RESET_TO_DEFAULTS':
+      for (const t of state.tributes) {
+        if (t.image_url?.startsWith('blob:')) {
+          URL.revokeObjectURL(t.image_url)
+        }
+      }
+      return createInitialGameStore()
+
     case 'SET_TRIBUTES':
+      for (const t of state.tributes) {
+        if (t.image_url?.startsWith('blob:')) {
+          URL.revokeObjectURL(t.image_url)
+        }
+      }
       return { ...state, tributes: action.tributes }
 
     case 'ADD_TRIBUTE':
@@ -113,25 +165,35 @@ function gameReducer(state: GameStore, action: GameAction): GameStore {
           ...state.tributes,
           {
             id: makeId(),
-            name: `Player ${state.tributes.length + 1}`,
+            name: `Giocatore ${state.tributes.length + 1}`,
             pronoun_option: PronounSetting.Common,
           },
         ],
       }
 
-    case 'REMOVE_TRIBUTE':
+    case 'REMOVE_TRIBUTE': {
+      const removed = state.tributes.find((t) => t.id === action.id)
+      if (removed?.image_url?.startsWith('blob:')) {
+        URL.revokeObjectURL(removed.image_url)
+      }
       return {
         ...state,
         tributes: state.tributes.filter((t) => t.id !== action.id),
       }
+    }
 
-    case 'UPDATE_TRIBUTE':
+    case 'UPDATE_TRIBUTE': {
+      const prev = state.tributes.find((t) => t.id === action.id)
+      if (!prev) return state
+      const merged = { ...prev, ...action.updates }
+      if (prev.image_url?.startsWith('blob:') && merged.image_url !== prev.image_url) {
+        URL.revokeObjectURL(prev.image_url)
+      }
       return {
         ...state,
-        tributes: state.tributes.map((t) =>
-          t.id === action.id ? { ...t, ...action.updates } : t,
-        ),
+        tributes: state.tributes.map((t) => (t.id === action.id ? merged : t)),
       }
+    }
 
     case 'REORDER_TRIBUTES': {
       const tributes = [...state.tributes]
@@ -145,7 +207,7 @@ function gameReducer(state: GameStore, action: GameAction): GameStore {
 
     case 'START_GAME': {
       if (state.tributes.length < 2) {
-        return { ...state, error: 'Need at least 2 tributes to start!' }
+        return { ...state, error: it.errorNeedTwoTributes }
       }
       const eventList = state.customEvents
         ? loadEventsFromStored(state.customEvents)
@@ -160,6 +222,8 @@ function gameReducer(state: GameStore, action: GameAction): GameStore {
         min: state.gameSettings.killsPerRoundMin,
         max: state.gameSettings.killsPerRoundMax,
         randomModeDeathCap: state.gameSettings.randomRoundDeathCap,
+        eventsPerPhaseMin: state.gameSettings.eventsPerPhaseMin,
+        eventsPerPhaseMax: state.gameSettings.eventsPerPhaseMax,
       }
       const game = new Game(tributeResult, eventList, undefined, killLimit)
       const renderState = game.advanceGame()
@@ -191,6 +255,36 @@ function gameReducer(state: GameStore, action: GameAction): GameStore {
         }
       }
       return { ...state, renderState }
+    }
+
+    case 'SKIP_TO_NEXT_DAY': {
+      if (!state.game || !state.renderState) return state
+      const game = state.game
+      const startDays = game.days_passed
+      let renderState: GameRenderStateData = state.renderState
+      let safety = 0
+      while (game.days_passed <= startDays && safety++ < 120) {
+        const next = game.advanceGame()
+        if (next instanceof Error) {
+          return { ...state, error: next.message }
+        }
+        renderState = next
+        if (next.state === RenderState.GAME_OVER) {
+          return {
+            ...state,
+            renderState: next,
+            screen: 'results',
+            error: null,
+            isAutoPlaying: false,
+          }
+        }
+      }
+      return {
+        ...state,
+        renderState,
+        error: null,
+        isAutoPlaying: false,
+      }
     }
 
     case 'ABORT_GAME':

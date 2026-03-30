@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import type { EventList, StoredEvent, TributeCharacterSelectOptions } from '../engine/types'
 import { loadCharactersFromJson, loadEventsFromJson, saveCharactersToJson, saveEventsToJson, downloadJson, readJsonFile } from '../engine/serialization'
 import { builtinEvents } from '../engine/events'
+import { it } from '../i18n/it'
 import TributeCard from './TributeCard'
 
 interface RosterBuilderProps {
@@ -42,7 +43,7 @@ export default function RosterBuilder({
       const loaded = await loadCharactersFromJson(data)
       onSetTributes(loaded)
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to load characters')
+      onError(err instanceof Error ? err.message : it.errorLoadCharacters)
     }
     e.target.value = ''
   }
@@ -60,7 +61,7 @@ export default function RosterBuilder({
       const loaded = loadEventsFromJson(data)
       onSetCustomEvents(loaded)
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to load events')
+      onError(err instanceof Error ? err.message : it.errorLoadEvents)
     }
     e.target.value = ''
   }
@@ -82,29 +83,32 @@ export default function RosterBuilder({
   return (
     <div className="lobby-screen">
       <div className="lobby-hero">
-        <h1>Hunger Games</h1>
-        <p className="subtitle">Simulator</p>
+        <h1>{it.appTitle}</h1>
+        <p className="subtitle">{it.appSubtitle}</p>
         <input
           className="season-title-input"
           type="text"
           value={seasonTitle}
           onChange={(e) => onSeasonTitleChange(e.target.value)}
-          placeholder="Season Title..."
+          placeholder={it.seasonPlaceholder}
         />
       </div>
 
       <section className="roster-section">
+        <p className="roster-persist-hint">
+          {it.persistHintLobby}
+        </p>
         <div className="roster-toolbar">
-          <h2>Tributes ({tributes.length})</h2>
+          <h2>{it.tributesHeading(tributes.length)}</h2>
           <div className="roster-toolbar-actions">
             <button className="btn btn-secondary" onClick={onAddTribute}>
-              + Add
+              {it.addTribute}
             </button>
             <button className="btn btn-ghost" onClick={() => charFileRef.current?.click()}>
-              Load JSON
+              {it.loadJson}
             </button>
             <button className="btn btn-ghost" onClick={handleSaveCharacters}>
-              Save JSON
+              {it.saveJson}
             </button>
             <input
               ref={charFileRef}
@@ -128,34 +132,34 @@ export default function RosterBuilder({
           ))}
           <button className="add-tribute-card" onClick={onAddTribute}>
             <span className="plus">+</span>
-            <span className="label">Add Tribute</span>
+            <span className="label">{it.addTributeCard}</span>
           </button>
         </div>
 
         <div className="roster-toolbar" style={{ marginTop: 16 }}>
           <h2>
-            Events
+            {it.eventsHeading}
             {eventCount !== null && (
               <span style={{ color: 'var(--accent)', marginLeft: 8 }}>
-                (Custom: {eventCount})
+                {it.eventsCustom(eventCount)}
               </span>
             )}
             {eventCount === null && (
               <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>
-                (Default)
+                {it.eventsDefault}
               </span>
             )}
           </h2>
           <div className="roster-toolbar-actions">
             <button className="btn btn-ghost" onClick={() => eventFileRef.current?.click()}>
-              Load Events
+              {it.loadEvents}
             </button>
             <button className="btn btn-ghost" onClick={handleSaveEvents}>
-              Save Events
+              {it.saveEvents}
             </button>
             {customEvents && (
               <button className="btn btn-danger" onClick={handleResetEvents} style={{ fontSize: 11 }}>
-                Reset to Default
+                {it.resetEventsDefault}
               </button>
             )}
             <input
@@ -175,11 +179,11 @@ export default function RosterBuilder({
           onClick={onStartGame}
           disabled={tributes.length < 2}
         >
-          Begin The Games
+          {it.beginGames}
         </button>
         {tributes.length < 2 && (
           <p style={{ marginTop: 12, color: 'var(--text-muted)', fontSize: 13 }}>
-            Need at least 2 tributes
+            {it.needTwoTributes}
           </p>
         )}
       </div>

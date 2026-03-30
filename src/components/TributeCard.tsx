@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { PronounSetting, type TributeCharacterSelectOptions } from '../engine/types'
+import { it } from '../i18n/it'
 
 interface TributeCardProps {
   tribute: TributeCharacterSelectOptions
@@ -31,7 +32,7 @@ export default function TributeCard({ tribute, index, onUpdate, onRemove }: Trib
   return (
     <div className="tribute-card" style={{ animationDelay: `${index * 50}ms` }}>
       <div className="tribute-card-actions">
-        <button onClick={() => onRemove(tribute.id)} title="Remove">
+        <button onClick={() => onRemove(tribute.id)} title={it.removeTribute}>
           &times;
         </button>
       </div>
@@ -42,7 +43,7 @@ export default function TributeCard({ tribute, index, onUpdate, onRemove }: Trib
         ) : (
           <span className="placeholder">{getInitials(tribute.name || '?')}</span>
         )}
-        <div className="portrait-overlay">Upload Image</div>
+        <div className="portrait-overlay">{it.uploadImage}</div>
         <input
           ref={fileRef}
           type="file"
@@ -57,14 +58,14 @@ export default function TributeCard({ tribute, index, onUpdate, onRemove }: Trib
           type="text"
           value={tribute.name}
           onChange={(e) => onUpdate(tribute.id, { name: e.target.value })}
-          placeholder="Tribute name"
+          placeholder={it.tributeNamePh}
         />
         <input
           className="subtitle-input"
           type="text"
           value={tribute.subtitle ?? ''}
           onChange={(e) => onUpdate(tribute.id, { subtitle: e.target.value })}
-          placeholder="Tagline or team..."
+          placeholder={it.taglinePh}
         />
         <div className="tribute-card-pronoun">
           <select
@@ -73,11 +74,11 @@ export default function TributeCard({ tribute, index, onUpdate, onRemove }: Trib
               onUpdate(tribute.id, { pronoun_option: e.target.value as PronounSetting })
             }
           >
-            <option value={PronounSetting.Masculine}>He/Him</option>
-            <option value={PronounSetting.Feminine}>She/Her</option>
-            <option value={PronounSetting.Common}>They/Them</option>
-            <option value={PronounSetting.None}>No Pronouns</option>
-            <option value={PronounSetting.Custom}>Custom</option>
+            <option value={PronounSetting.Masculine}>{it.pronounHe}</option>
+            <option value={PronounSetting.Feminine}>{it.pronounShe}</option>
+            <option value={PronounSetting.Common}>{it.pronounThey}</option>
+            <option value={PronounSetting.None}>{it.pronounNone}</option>
+            <option value={PronounSetting.Custom}>{it.pronounCustom}</option>
           </select>
         </div>
         {tribute.pronoun_option === PronounSetting.Custom && (
@@ -85,7 +86,7 @@ export default function TributeCard({ tribute, index, onUpdate, onRemove }: Trib
             type="text"
             value={tribute.custom_pronouns ?? ''}
             onChange={(e) => onUpdate(tribute.id, { custom_pronouns: e.target.value })}
-            placeholder="nom/acc/gen/reflx"
+            placeholder={it.pronounCustomPh}
             style={{ marginTop: 4, fontSize: 12 }}
           />
         )}

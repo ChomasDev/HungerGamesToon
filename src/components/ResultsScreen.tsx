@@ -1,4 +1,5 @@
 import type { Game } from '../engine/game'
+import { it } from '../i18n/it'
 
 interface ResultsScreenProps {
   game: Game
@@ -29,7 +30,7 @@ export default function ResultsScreen({
 
   return (
     <div className="results-screen">
-      <h1>{winners.length > 0 ? 'Victory' : 'No Victors'}</h1>
+      <h1>{winners.length > 0 ? it.resultsVictory : it.resultsNoVictors}</h1>
       <p className="results-subtitle">{seasonTitle}</p>
 
       {winners.length > 0 && (
@@ -49,7 +50,7 @@ export default function ResultsScreen({
               </div>
               <span className="results-winner-name">{tribute.raw_name}</span>
               <span className="results-winner-stat">
-                {tribute.kills} Kill{tribute.kills !== 1 ? 's' : ''}
+                {it.kills(tribute.kills)}
               </span>
             </div>
           ))}
@@ -58,7 +59,7 @@ export default function ResultsScreen({
 
       <div className="stats-section" style={{ maxWidth: 800, width: '100%' }}>
         <div className="round-banner">
-          <h2 style={{ fontSize: 20 }}>All Tributes</h2>
+          <h2 style={{ fontSize: 20 }}>{it.allTributes}</h2>
           <div className="round-divider" />
         </div>
         <div className="stats-grid" style={{ marginTop: 16 }}>
@@ -81,8 +82,8 @@ export default function ResultsScreen({
                   <div className="stat-card-name">{tribute.raw_name}</div>
                   <div className="stat-card-detail">
                     {isWinner
-                      ? 'Victor'
-                      : `Eliminated Round ${(tribute.died_in_round?.index ?? 0) + 1}`}
+                      ? it.victor
+                      : it.eliminatedRound((tribute.died_in_round?.index ?? 0) + 1)}
                   </div>
                 </div>
                 <div className="stat-card-kills">{tribute.kills}</div>
@@ -94,10 +95,10 @@ export default function ResultsScreen({
 
       <div className="results-actions">
         <button className="btn btn-primary btn-large" onClick={onPlayAgain}>
-          Play Again
+          {it.playAgain}
         </button>
         <button className="btn btn-secondary btn-large" onClick={onBackToLobby}>
-          Back to Lobby
+          {it.backToLobby}
         </button>
       </div>
     </div>

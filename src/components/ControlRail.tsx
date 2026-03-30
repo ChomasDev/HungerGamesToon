@@ -1,3 +1,5 @@
+import { it } from '../i18n/it'
+
 interface ControlRailProps {
   onProceed: () => void
   onAbort: () => void
@@ -5,6 +7,13 @@ interface ControlRailProps {
   autoPlaySpeed: number
   onToggleAutoPlay: () => void
   onSpeedChange: (speed: number) => void
+  /** Shown on the primary button when not auto-playing */
+  proceedLabel?: string
+  /**
+   * While watching round scenes, Prev / Next scene / Next phase live on the stage.
+   * Hide this button so the bar is only Auto, speed, and Abort (Pause still shows during auto-play).
+   */
+  hidePrimaryProceed?: boolean
 }
 
 export default function ControlRail({
@@ -14,22 +23,28 @@ export default function ControlRail({
   autoPlaySpeed,
   onToggleAutoPlay,
   onSpeedChange,
+  proceedLabel = it.controlNext,
+  hidePrimaryProceed = false,
 }: ControlRailProps) {
+  const showPrimary = isAutoPlaying || !hidePrimaryProceed
+
   return (
     <div className="control-rail">
-      <button className="btn btn-primary" onClick={onProceed}>
-        {isAutoPlaying ? '⏸ Pause' : '▶ Next'}
-      </button>
+      {showPrimary ? (
+        <button type="button" className="btn btn-primary" onClick={onProceed}>
+          {isAutoPlaying ? it.controlPause : proceedLabel}
+        </button>
+      ) : null}
 
       <button
         className="btn btn-secondary"
         onClick={onToggleAutoPlay}
       >
-        {isAutoPlaying ? 'Stop Auto' : 'Auto Play'}
+        {isAutoPlaying ? it.controlStopAuto : it.controlAutoPlay}
       </button>
 
       <div className="speed-control">
-        <span>Speed</span>
+        <span>{it.controlSpeed}</span>
         <input
           type="range"
           min={500}
@@ -42,7 +57,7 @@ export default function ControlRail({
       </div>
 
       <button className="btn btn-danger" onClick={onAbort}>
-        Abort Game
+        {it.controlAbortGame}
       </button>
     </div>
   )

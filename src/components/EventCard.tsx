@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { NameSpan, type GameEventData } from '../engine/types'
+import { it } from '../i18n/it'
 
 interface EventCardProps {
   event: GameEventData
@@ -30,13 +32,24 @@ function Portrait({
   className?: string
   square?: boolean
 }) {
+  const [imgFailed, setImgFailed] = useState(false)
+  useEffect(() => {
+    setImgFailed(false)
+  }, [src])
+
+  const showImg = Boolean(src) && !imgFailed
+
   return (
     <div
       className={`arena-portrait ${square ? 'arena-portrait-square' : ''} ${isDead ? 'is-eliminated' : ''} ${className}`}
       style={{ width: size, height: size }}
     >
-      {src ? (
-        <img src={src} alt={name} />
+      {showImg ? (
+        <img
+          src={src}
+          alt={name}
+          onError={() => setImgFailed(true)}
+        />
       ) : (
         <span className="arena-portrait-initials">{getInitials(name)}</span>
       )}
@@ -87,39 +100,44 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
         style={{ animationDelay: `${index * 100}ms` }}
       >
         <div className="arena-battle-stage">
-          <div className="arena-side arena-side-attacker">
-            {attackers.map((t, i) => (
-              <div key={i} className="arena-fighter">
-                <Portrait src={t.image_src} name={t.raw_name} isDead={false} size={portraitSize} square={sq} />
-                <span className="arena-fighter-name">{t.raw_name}</span>
-                <span className="arena-fighter-role">Killer</span>
-              </div>
-            ))}
+          <div className="arena-battle-row">
+            <div className="arena-side arena-side-attacker">
+              {attackers.map((t, i) => (
+                <div key={i} className="arena-fighter">
+                  <Portrait src={t.image_src} name={t.raw_name} isDead={false} size={portraitSize} square={sq} />
+                  <span className="arena-fighter-name">{t.raw_name}</span>
+                  <span className="arena-fighter-role">{it.killer}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="arena-vs-badge">
+              <span className="arena-vs-text">VS</span>
+              <div className="arena-vs-slash" aria-hidden />
+            </div>
+
+            <div className="arena-side arena-side-victim">
+              {victims.map((t, i) => (
+                <div key={i} className="arena-fighter">
+                  <Portrait src={t.image_src} name={t.raw_name} isDead={true} size={portraitSize} square={sq} />
+                  <span className="arena-fighter-name arena-fighter-dead">{t.raw_name}</span>
+                  <span className="arena-fighter-role arena-fighter-role-dead">{it.eliminated}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="arena-vs-badge">
-            <span className="arena-vs-text">VS</span>
-            <div className="arena-vs-slash" />
-          </div>
-
-          <div className="arena-side arena-side-victim">
-            {victims.map((t, i) => (
-              <div key={i} className="arena-fighter">
-                <Portrait src={t.image_src} name={t.raw_name} isDead={true} size={portraitSize} square={sq} />
-                <span className="arena-fighter-name arena-fighter-dead">{t.raw_name}</span>
-                <span className="arena-fighter-role arena-fighter-role-dead">Eliminated</span>
-              </div>
-            ))}
-          </div>
+          {bystanders.length > 0 && (
+            <div className="arena-bystanders">
+              {bystanders.map((t, i) => (
+                <div key={i} className="arena-bystander-chip">
+                  <Portrait src={t.image_src} name={t.raw_name} isDead={false} size={portraitSizeXs} square={sq} />
+                  <span className="arena-bystander-label">{t.raw_name}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-
-        {bystanders.length > 0 && (
-          <div className="arena-bystanders">
-            {bystanders.map((t, i) => (
-              <Portrait key={i} src={t.image_src} name={t.raw_name} isDead={false} size={portraitSizeXs} square={sq} />
-            ))}
-          </div>
-        )}
 
         <div className="arena-event-body">
           <MessageText message={event.message} large={fullscreen} />
@@ -141,7 +159,7 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
           <Portrait src={tribute.image_src} name={tribute.raw_name} isDead={true} size={portraitSizeLg} square={sq} />
           <div className="arena-solo-info">
             <span className="arena-fighter-name arena-fighter-dead">{tribute.raw_name}</span>
-            <span className="arena-fighter-role arena-fighter-role-dead">Eliminated</span>
+            <span className="arena-fighter-role arena-fighter-role-dead">{it.eliminated}</span>
           </div>
         </div>
         <div className="arena-event-body">

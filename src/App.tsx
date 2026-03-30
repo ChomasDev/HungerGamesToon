@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 import { RenderState } from './engine/types'
+import { clearLocalGameDb, loadPersistedAppState, savePersistedAppState } from './db/localGameDb'
 import { useGameStore, type GameSettings, type ThemeConfig } from './store/gameStore'
 import TopBar from './components/TopBar'
 import RosterBuilder from './components/RosterBuilder'
@@ -13,6 +14,7 @@ import CustomizationDrawer from './components/CustomizationDrawer'
 function App() {
   const { state, dispatch } = useGameStore()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [persistReady, setPersistReady] = useState(false)
   const [roundEventIndex, setRoundEventIndex] = useState(0)
   const autoPlayRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const roundEventIndexRef = useRef(0)
@@ -22,6 +24,45 @@ function App() {
   useEffect(() => {
     setRoundEventIndex(0)
   }, [roundsLen])
+
+  useEffect(() => {
+    let cancelled = false
+    loadPersistedAppState()
+      .then((data) => {
+        if (cancelled || !data) return
+        dispatch({ type: 'HYDRATE', payload: data })
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setPersistReady(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [dispatch])
+
+  useEffect(() => {
+    if (!persistReady) return
+    const t = window.setTimeout(() => {
+      savePersistedAppState({
+        seasonTitle: state.seasonTitle,
+        theme: state.theme,
+        gameSettings: state.gameSettings,
+        autoPlaySpeed: state.autoPlaySpeed,
+        tributes: state.tributes,
+        customEvents: state.customEvents,
+      }).catch(() => {})
+    }, 480)
+    return () => window.clearTimeout(t)
+  }, [
+    persistReady,
+    state.tributes,
+    state.seasonTitle,
+    state.theme,
+    state.gameSettings,
+    state.autoPlaySpeed,
+    state.customEvents,
+  ])
 
   const stopAutoPlay = useCallback(() => {
     if (autoPlayRef.current) {
@@ -113,6 +154,9 @@ function App() {
   const themeAttr = state.theme.preset
   const motionAttr = state.theme.motionLevel
 
+  const hideControlPrimaryDuringRound =
+    state.renderState?.state === RenderState.ROUND_EVENTS && !state.isAutoPlaying
+
   return (
     <div
       className="app-shell"
@@ -156,6 +200,10 @@ function App() {
             eventIndex={roundEventIndex}
             onEventIndexChange={setRoundEventIndex}
             onAdvanceGame={() => dispatch({ type: 'ADVANCE_GAME' })}
+            onSkipToNextDay={() => {
+              setRoundEventIndex(0)
+              dispatch({ type: 'SKIP_TO_NEXT_DAY' })
+            }}
           />
           <ControlRail
             onProceed={handleProceed}
@@ -164,6 +212,7 @@ function App() {
             autoPlaySpeed={state.autoPlaySpeed}
             onToggleAutoPlay={handleToggleAutoPlay}
             onSpeedChange={(speed) => dispatch({ type: 'SET_AUTO_PLAY', playing: state.isAutoPlaying, speed })}
+            hidePrimaryProceed={hideControlPrimaryDuringRound}
           />
         </div>
       )}
@@ -184,6 +233,10 @@ function App() {
         onThemeChange={handleThemeChange}
         gameSettings={state.gameSettings}
         onGameSettingsChange={(s: Partial<GameSettings>) => dispatch({ type: 'SET_GAME_SETTINGS', settings: s })}
+        onEraseLocalData={async () => {
+          await clearLocalGameDb()
+          dispatch({ type: 'RESET_TO_DEFAULTS' })
+        }}
       />
 
       {state.error && (

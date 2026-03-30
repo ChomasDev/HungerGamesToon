@@ -71,7 +71,7 @@ export async function loadCharactersFromJson(data: unknown): Promise<TributeChar
     }))
   }
 
-  throw new Error('Invalid character file format')
+  throw new Error('Formato file personaggi non valido')
 }
 
 export function saveCharactersToJson(tributes: TributeCharacterSelectOptions[]): V1CharacterConfig {
@@ -110,7 +110,7 @@ export function loadEventsFromJson(data: unknown): EventList<StoredEvent> {
     return raw
   }
 
-  throw new Error('Invalid events file format')
+  throw new Error('Formato file eventi non valido')
 }
 
 export function saveEventsToJson(events: EventList<StoredEvent>): V1EventConfig {
@@ -154,10 +154,10 @@ export function readJsonFile(file: File): Promise<unknown> {
       try {
         resolve(JSON.parse(reader.result as string))
       } catch {
-        reject(new Error('Invalid JSON file'))
+        reject(new Error('File JSON non valido'))
       }
     }
-    reader.onerror = () => reject(new Error('Failed to read file'))
+    reader.onerror = () => reject(new Error('Lettura del file non riuscita'))
     reader.readAsText(file)
   })
 }

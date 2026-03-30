@@ -30,6 +30,8 @@ export interface GameSettings {
   killsPerRoundValue: number
   killsPerRoundMin: number
   killsPerRoundMax: number
+  /** Fully Random only: max deaths per phase; 0 = unlimited */
+  randomRoundDeathCap: number
 }
 
 export interface GameStore {
@@ -95,6 +97,7 @@ const initialState: GameStore = {
     killsPerRoundValue: 1,
     killsPerRoundMin: 0,
     killsPerRoundMax: 3,
+    randomRoundDeathCap: 5,
   },
 }
 
@@ -156,6 +159,7 @@ function gameReducer(state: GameStore, action: GameAction): GameStore {
         value: state.gameSettings.killsPerRoundValue,
         min: state.gameSettings.killsPerRoundMin,
         max: state.gameSettings.killsPerRoundMax,
+        randomModeDeathCap: state.gameSettings.randomRoundDeathCap,
       }
       const game = new Game(tributeResult, eventList, undefined, killLimit)
       const renderState = game.advanceGame()

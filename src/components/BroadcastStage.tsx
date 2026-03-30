@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { RenderState, titleCase, type GameRenderStateData } from '../engine/types'
 import EventCard from './EventCard'
 
 interface BroadcastStageProps {
   renderState: GameRenderStateData
+  eventIndex: number
+  onEventIndexChange: (index: number) => void
+  onAdvanceGame?: () => void
 }
 
 function getInitials(name: string) {
@@ -15,43 +18,63 @@ function getInitials(name: string) {
     .toUpperCase()
 }
 
-export default function BroadcastStage({ renderState }: BroadcastStageProps) {
+export default function BroadcastStage({
+  renderState,
+  eventIndex,
+  onEventIndexChange,
+  onAdvanceGame,
+}: BroadcastStageProps) {
   const { state, game_title, rounds, tributes_died, tributes_alive } = renderState
-  const [eventIndex, setEventIndex] = useState(0)
 
   const currentRound = rounds[rounds.length - 1]
   const totalEvents = currentRound?.game_events.length ?? 0
+  const isLastEvent = totalEvents > 0 && eventIndex >= totalEvents - 1
+  const hasNoEvents = totalEvents === 0
 
-  useEffect(() => {
-    setEventIndex(0)
-  }, [rounds.length, state])
+  const goNextEvent = useCallback(() => {
+    onEventIndexChange(Math.min(eventIndex + 1, Math.max(0, totalEvents - 1)))
+  }, [eventIndex, totalEvents, onEventIndexChange])
 
-  const goNext = useCallback(() => {
-    setEventIndex((prev) => Math.min(prev + 1, totalEvents - 1))
-  }, [totalEvents])
-
-  const goPrev = useCallback(() => {
-    setEventIndex((prev) => Math.max(prev - 1, 0))
-  }, [])
+  const goPrevEvent = useCallback(() => {
+    onEventIndexChange(Math.max(eventIndex - 1, 0))
+  }, [eventIndex, onEventIndexChange])
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (state !== RenderState.ROUND_EVENTS) return
-      if (e.key === 'ArrowRight' || e.key === 'd') goNext()
-      if (e.key === 'ArrowLeft' || e.key === 'a') goPrev()
+      if (state !== RenderState.ROUND_EVENTS || !onAdvanceGame) return
+      const t = e.target as HTMLElement
+      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return
+
+      if (e.key === '[' || e.key === 'PageUp') {
+        e.preventDefault()
+        goPrevEvent()
+        return
+      }
+      if (e.key === ']' || e.key === 'PageDown') {
+        e.preventDefault()
+        if (isLastEvent || hasNoEvents) onAdvanceGame()
+        else goNextEvent()
+        return
+      }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        if (isLastEvent || hasNoEvents) onAdvanceGame()
+        else goNextEvent()
+      }
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [state, goNext, goPrev])
+  }, [state, onAdvanceGame, goPrevEvent, goNextEvent, isLastEvent, hasNoEvents])
 
   if (state === RenderState.ROUND_EVENTS) {
     const currentEvent = currentRound?.game_events[eventIndex]
+
     return (
       <div className="center-stage fullscreen-stage">
         <div className="round-banner round-banner-compact">
           <h2>{game_title}</h2>
           <div className="round-counter">
-            {eventIndex + 1} / {totalEvents}
+            {hasNoEvents ? '—' : `${eventIndex + 1} / ${totalEvents}`}
           </div>
         </div>
 
@@ -59,35 +82,52 @@ export default function BroadcastStage({ renderState }: BroadcastStageProps) {
           {currentEvent && (
             <EventCard key={`${rounds.length}-${eventIndex}`} event={currentEvent} index={0} fullscreen />
           )}
+          {hasNoEvents && (
+            <div className="arena-card arena-card-fullscreen arena-card-empty-round">
+              <p className="arena-event-text arena-event-text-lg">No events this phase.</p>
+            </div>
+          )}
         </div>
 
         <div className="event-nav">
           <button
+            type="button"
             className="btn btn-secondary event-nav-btn"
-            onClick={goPrev}
-            disabled={eventIndex === 0}
+            onClick={goPrevEvent}
+            disabled={eventIndex === 0 || hasNoEvents}
           >
             &larr; Prev
           </button>
           <div className="event-nav-dots">
-            {Array.from({ length: totalEvents }, (_, i) => (
-              <button
-                key={i}
-                className={`event-dot ${i === eventIndex ? 'active' : ''} ${
-                  currentRound.game_events[i].event.fatalities.length > 0 ? 'dot-death' : ''
-                }`}
-                onClick={() => setEventIndex(i)}
-              />
-            ))}
+            {!hasNoEvents &&
+              Array.from({ length: totalEvents }, (_, i) => (
+                <button
+                  type="button"
+                  key={i}
+                  className={`event-dot ${i === eventIndex ? 'active' : ''} ${
+                    currentRound!.game_events[i].event.fatalities.length > 0 ? 'dot-death' : ''
+                  }`}
+                  onClick={() => onEventIndexChange(i)}
+                />
+              ))}
           </div>
-          <button
-            className="btn btn-secondary event-nav-btn"
-            onClick={goNext}
-            disabled={eventIndex >= totalEvents - 1}
-          >
-            Next &rarr;
-          </button>
+          {isLastEvent || hasNoEvents ? (
+            <button
+              type="button"
+              className="btn btn-primary event-nav-btn event-nav-continue"
+              onClick={() => onAdvanceGame?.()}
+              disabled={!onAdvanceGame}
+            >
+              Continue &rarr;
+            </button>
+          ) : (
+            <button type="button" className="btn btn-secondary event-nav-btn" onClick={goNextEvent}>
+              Next &rarr;
+            </button>
+          )}
         </div>
+
+        <p className="event-nav-hint">[ and ] to browse scenes · Enter continues after the last one</p>
       </div>
     )
   }

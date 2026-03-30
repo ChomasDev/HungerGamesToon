@@ -22,6 +22,8 @@ export interface KillLimitConfig {
   value: number
   min: number
   max: number
+  /** When mode is random: hard cap on deaths this phase; 0 = no cap */
+  randomModeDeathCap?: number
 }
 
 const char_zero = '0'.charCodeAt(0)
@@ -205,6 +207,7 @@ export class Game {
   nights_passed: number = 0
   readonly event_list: GameEventList
   readonly killLimit: KillLimitConfig
+  readonly randomModeDeathCap: number
 
   constructor(
     tributes: Tribute[],
@@ -216,6 +219,7 @@ export class Game {
     this.tributes_alive = [...tributes]
     this.fatality_reroll_rate = fatality_reroll_rate
     this.killLimit = killLimit ?? { mode: 'random', value: 1, min: 0, max: 3 }
+    this.randomModeDeathCap = killLimit?.randomModeDeathCap ?? 0
     this.event_list = { bloodbath: [], day: [], night: [], feast: [] }
     this.addEvents(events)
   }
@@ -298,15 +302,27 @@ export class Game {
     }
   }
 
+  /** Deaths allowed this phase: exact/range target, or random-mode cap; -1 = unlimited */
+  private getDeathCapForRound(): number {
+    const kt = this.computeKillTarget()
+    if (kt >= 0) return kt
+    if (this.randomModeDeathCap > 0) return this.randomModeDeathCap
+    return -1
+  }
+
   private requirementsSatisfied(
     event: Event,
     currentTribute: number,
     tributesLeft: number,
     diedThisRound: number,
-    killTarget: number,
+    deathCap: number,
   ): boolean {
     if (event.players_involved > tributesLeft) return false
-    if (killTarget >= 0 && event.fatalities.length > 0 && diedThisRound >= killTarget) return false
+    if (deathCap >= 0 && event.fatalities.length > 0) {
+      const add = event.fatalities.length
+      if (diedThisRound >= deathCap) return false
+      if (diedThisRound + add > deathCap) return false
+    }
     if (event.fatalities.length && Math.random() < this.fatality_reroll_rate) return false
     return true
   }
@@ -340,7 +356,7 @@ export class Game {
 
     if (!eventList.length) return
     let diedThisRound = 0
-    const killTarget = this.computeKillTarget()
+    const deathCap = this.getDeathCapForRound()
 
     outer: while (tributesLeft) {
       const tributes_involved: Tribute[] = []
@@ -349,7 +365,7 @@ export class Game {
       do {
         if (tries++ > Math.max(100, eventList.length * 10)) break outer
         event = eventList[random(0, eventList.length)]
-      } while (!this.requirementsSatisfied(event, currentTribute, tributesLeft, diedThisRound, killTarget))
+      } while (!this.requirementsSatisfied(event, currentTribute, tributesLeft, diedThisRound, deathCap))
       tributesLeft -= event.players_involved
 
       for (const f of event.fatalities) {
@@ -377,6 +393,7 @@ export class Game {
       round.game_events.push(gameEvent)
 
       if (tributesAlive < 2) break
+      if (deathCap >= 0 && diedThisRound >= deathCap) break
     }
 
     shuffle(round.game_events)

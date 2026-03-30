@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
+import { RenderState } from './engine/types'
 import { useGameStore, type GameSettings, type ThemeConfig } from './store/gameStore'
 import TopBar from './components/TopBar'
 import RosterBuilder from './components/RosterBuilder'
@@ -12,7 +13,15 @@ import CustomizationDrawer from './components/CustomizationDrawer'
 function App() {
   const { state, dispatch } = useGameStore()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [roundEventIndex, setRoundEventIndex] = useState(0)
   const autoPlayRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const roundEventIndexRef = useRef(0)
+  roundEventIndexRef.current = roundEventIndex
+
+  const roundsLen = state.renderState?.rounds.length ?? 0
+  useEffect(() => {
+    setRoundEventIndex(0)
+  }, [roundsLen])
 
   const stopAutoPlay = useCallback(() => {
     if (autoPlayRef.current) {
@@ -26,7 +35,7 @@ function App() {
     stopAutoPlay()
     dispatch({ type: 'SET_AUTO_PLAY', playing: true })
     autoPlayRef.current = setInterval(() => {
-      dispatch({ type: 'ADVANCE_GAME' })
+      stepGameForwardRef.current()
     }, state.autoPlaySpeed)
   }, [dispatch, state.autoPlaySpeed, stopAutoPlay])
 
@@ -41,7 +50,7 @@ function App() {
       stopAutoPlay()
       dispatch({ type: 'SET_AUTO_PLAY', playing: true })
       autoPlayRef.current = setInterval(() => {
-        dispatch({ type: 'ADVANCE_GAME' })
+        stepGameForwardRef.current()
       }, state.autoPlaySpeed)
     }
     return () => {
@@ -55,13 +64,34 @@ function App() {
     }
   }, [])
 
-  function handleProceed() {
+  const stepGameForward = useCallback(() => {
+    const rs = state.renderState
+    if (!rs) return
+    if (rs.state === RenderState.ROUND_EVENTS) {
+      const cur = rs.rounds[rs.rounds.length - 1]
+      const n = cur?.game_events.length ?? 0
+      if (n === 0) {
+        dispatch({ type: 'ADVANCE_GAME' })
+        return
+      }
+      if (roundEventIndexRef.current < n - 1) {
+        setRoundEventIndex((i) => i + 1)
+        return
+      }
+    }
+    dispatch({ type: 'ADVANCE_GAME' })
+  }, [state.renderState, dispatch])
+
+  const stepGameForwardRef = useRef(stepGameForward)
+  stepGameForwardRef.current = stepGameForward
+
+  const handleProceed = useCallback(() => {
     if (state.isAutoPlaying) {
       stopAutoPlay()
-    } else {
-      dispatch({ type: 'ADVANCE_GAME' })
+      return
     }
-  }
+    stepGameForward()
+  }, [state.isAutoPlaying, stopAutoPlay, stepGameForward])
 
   function handleToggleAutoPlay() {
     if (state.isAutoPlaying) {
@@ -121,7 +151,12 @@ function App() {
             allTributes={state.game.tributes}
             alive={state.renderState.tributes_alive}
           />
-          <BroadcastStage renderState={state.renderState} />
+          <BroadcastStage
+            renderState={state.renderState}
+            eventIndex={roundEventIndex}
+            onEventIndexChange={setRoundEventIndex}
+            onAdvanceGame={() => dispatch({ type: 'ADVANCE_GAME' })}
+          />
           <ControlRail
             onProceed={handleProceed}
             onAbort={handleAbort}

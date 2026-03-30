@@ -21,16 +21,18 @@ function Portrait({
   isDead,
   size = 56,
   className = '',
+  square = false,
 }: {
   src: string
   name: string
   isDead: boolean
   size?: number
   className?: string
+  square?: boolean
 }) {
   return (
     <div
-      className={`arena-portrait ${isDead ? 'is-eliminated' : ''} ${className}`}
+      className={`arena-portrait ${square ? 'arena-portrait-square' : ''} ${isDead ? 'is-eliminated' : ''} ${className}`}
       style={{ width: size, height: size }}
     >
       {src ? (
@@ -67,11 +69,12 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
   const isSoloDeath = hasDeath && players.length === 1
   const isGroupEvent = !hasDeath && players.length >= 2
 
-  const portraitSize = fullscreen ? 140 : 64
-  const portraitSizeLg = fullscreen ? 180 : 72
-  const portraitSizeSm = fullscreen ? 100 : 44
-  const portraitSizeXs = fullscreen ? 60 : 32
+  const portraitSize = fullscreen ? 220 : 64
+  const portraitSizeLg = fullscreen ? 280 : 72
+  const portraitSizeSm = fullscreen ? 140 : 44
+  const portraitSizeXs = fullscreen ? 88 : 32
   const wrapperClass = fullscreen ? 'arena-card-fullscreen' : ''
+  const sq = !!fullscreen
 
   if (isVsBattle) {
     const attackers = players.filter((_, i) => killerIndices.has(i))
@@ -87,7 +90,7 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
           <div className="arena-side arena-side-attacker">
             {attackers.map((t, i) => (
               <div key={i} className="arena-fighter">
-                <Portrait src={t.image_src} name={t.raw_name} isDead={false} size={portraitSize} />
+                <Portrait src={t.image_src} name={t.raw_name} isDead={false} size={portraitSize} square={sq} />
                 <span className="arena-fighter-name">{t.raw_name}</span>
                 <span className="arena-fighter-role">Killer</span>
               </div>
@@ -102,7 +105,7 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
           <div className="arena-side arena-side-victim">
             {victims.map((t, i) => (
               <div key={i} className="arena-fighter">
-                <Portrait src={t.image_src} name={t.raw_name} isDead={true} size={portraitSize} />
+                <Portrait src={t.image_src} name={t.raw_name} isDead={true} size={portraitSize} square={sq} />
                 <span className="arena-fighter-name arena-fighter-dead">{t.raw_name}</span>
                 <span className="arena-fighter-role arena-fighter-role-dead">Eliminated</span>
               </div>
@@ -113,7 +116,7 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
         {bystanders.length > 0 && (
           <div className="arena-bystanders">
             {bystanders.map((t, i) => (
-              <Portrait key={i} src={t.image_src} name={t.raw_name} isDead={false} size={portraitSizeXs} />
+              <Portrait key={i} src={t.image_src} name={t.raw_name} isDead={false} size={portraitSizeXs} square={sq} />
             ))}
           </div>
         )}
@@ -135,7 +138,7 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
         style={{ animationDelay: `${index * 100}ms` }}
       >
         <div className="arena-solo-stage">
-          <Portrait src={tribute.image_src} name={tribute.raw_name} isDead={true} size={portraitSizeLg} />
+          <Portrait src={tribute.image_src} name={tribute.raw_name} isDead={true} size={portraitSizeLg} square={sq} />
           <div className="arena-solo-info">
             <span className="arena-fighter-name arena-fighter-dead">{tribute.raw_name}</span>
             <span className="arena-fighter-role arena-fighter-role-dead">Eliminated</span>
@@ -158,7 +161,7 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
         <div className="arena-group-portraits">
           {players.map((t, i) => (
             <div key={i} className="arena-group-member">
-              <Portrait src={t.image_src} name={t.raw_name} isDead={deadIndices.has(i)} size={portraitSizeSm} />
+              <Portrait src={t.image_src} name={t.raw_name} isDead={deadIndices.has(i)} size={portraitSizeSm} square={sq} />
               <span className="arena-group-name">{t.raw_name}</span>
             </div>
           ))}
@@ -177,7 +180,7 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
     >
       <div className="arena-standard-portraits">
         {players.map((t, i) => (
-          <Portrait key={i} src={t.image_src} name={t.raw_name} isDead={deadIndices.has(i)} size={portraitSizeSm} />
+          <Portrait key={i} src={t.image_src} name={t.raw_name} isDead={deadIndices.has(i)} size={portraitSizeSm} square={sq} />
         ))}
       </div>
       <div className="arena-event-body">

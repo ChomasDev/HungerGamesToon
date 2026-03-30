@@ -561,6 +561,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-height: 0;
 }
 
 .fullscreen-stage {
@@ -569,7 +570,7 @@
   min-height: 0;
   flex: 1;
   overflow: hidden;
-  padding: 16px;
+  padding: 8px 12px;
 }
 
 /* Round Banner */
@@ -609,6 +610,101 @@
 }
 
 /* ============================
+   Full-screen Event Viewport
+   ============================ */
+.fullscreen-card-viewport {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: min(98vw, 1680px);
+  min-height: 0;
+}
+
+.round-banner-compact {
+  padding: 12px 0 0;
+  flex-shrink: 0;
+}
+
+.round-counter {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* Event Navigation */
+.event-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  padding: 8px 0 4px;
+}
+
+.event-nav-btn {
+  padding: 8px 20px !important;
+  font-size: 13px !important;
+  min-width: 90px;
+}
+
+.event-nav-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 400px;
+}
+
+.event-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+.event-dot.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: scale(1.3);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+.event-dot.dot-death {
+  border-color: var(--dead);
+}
+.event-dot.dot-death.active {
+  background: var(--dead);
+  box-shadow: 0 0 8px rgba(230, 57, 70, 0.4);
+}
+
+.event-nav-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0 0 8px;
+  letter-spacing: 0.04em;
+}
+
+.event-nav-continue {
+  min-width: 140px;
+}
+
+.arena-card-empty-round {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  animation: epicCardReveal 0.5s ease both;
+}
+
+/* ============================
    Arena Cards (Epic Event Cards)
    ============================ */
 .arena-card {
@@ -620,10 +716,35 @@
   animation: slideUp var(--transition-base) both;
   transition: all var(--transition-fast);
 }
-.arena-card:hover {
-  border-color: var(--border-accent);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-card);
+
+.arena-card-fullscreen {
+  width: 100%;
+  max-height: min(88vh, 1200px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 20px;
+  border: 1.5px solid var(--border-accent);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5), 0 0 80px var(--accent-glow);
+  animation: epicCardReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes epicCardReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(30px);
+    filter: blur(6px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.02) translateY(-4px);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
 }
 
 .arena-card-stripe {
@@ -633,12 +754,20 @@
   width: 4px;
   height: 100%;
 }
+.arena-card-fullscreen .arena-card-stripe {
+  width: 6px;
+}
 .arena-card-stripe-death {
   background: linear-gradient(180deg, var(--dead), transparent);
 }
 
 .arena-event-body {
   padding: 16px 20px;
+}
+.arena-card-fullscreen .arena-event-body {
+  padding: 16px 24px 20px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .arena-event-text {
@@ -647,11 +776,16 @@
   margin: 0;
 }
 
+.arena-event-text-lg {
+  font-size: clamp(18px, 2.5vw, 24px);
+  line-height: 1.6;
+}
+
 /* --- Portrait --- */
 .arena-portrait {
   border-radius: 50%;
   background: var(--bg-tertiary);
-  border: 2px solid var(--accent);
+  border: 3px solid var(--accent);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -659,6 +793,11 @@
   flex-shrink: 0;
   position: relative;
   transition: all var(--transition-fast);
+}
+
+/* Fullscreen / epic cards: true square frames (must follow .arena-portrait so it overrides 50%) */
+.arena-portrait.arena-portrait-square {
+  border-radius: 0;
 }
 .arena-portrait img {
   width: 100%;
@@ -689,9 +828,69 @@
   animation: scaleIn 0.3s ease both;
 }
 
+/* Fullscreen portrait enhancements */
+.arena-card-fullscreen .arena-portrait {
+  border-width: 4px;
+  box-shadow: 0 0 20px var(--accent-glow), 0 4px 24px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+.arena-card-fullscreen .arena-portrait.is-eliminated {
+  box-shadow: 0 0 20px rgba(230, 57, 70, 0.3), 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/*
+ * Fullscreen / epic cards: nearly full-viewport square images (overrides inline px from Portrait).
+ */
+.arena-card-fullscreen.arena-card-solo-death .arena-solo-stage .arena-portrait.arena-portrait-square {
+  width: min(92vmin, 82vh, 1100px) !important;
+  height: min(92vmin, 82vh, 1100px) !important;
+}
+
+/* Single portrait standard / non-fatal spotlight */
+.arena-card-fullscreen.arena-card-standard .arena-standard-portraits .arena-portrait.arena-portrait-square:only-child {
+  width: min(92vmin, 82vh, 1100px) !important;
+  height: min(92vmin, 82vh, 1100px) !important;
+}
+
+/* Two tributes side by side */
+.arena-card-fullscreen.arena-card-standard
+  .arena-standard-portraits:has(.arena-portrait:nth-child(2):last-child)
+  .arena-portrait.arena-portrait-square {
+  width: min(46vmin, 52vh, 520px) !important;
+  height: min(46vmin, 52vh, 520px) !important;
+}
+
+/* Three or more — grid-style sharing */
+.arena-card-fullscreen.arena-card-standard
+  .arena-standard-portraits:has(.arena-portrait:nth-child(3))
+  .arena-portrait.arena-portrait-square {
+  width: min(34vmin, 40vh, 380px) !important;
+  height: min(34vmin, 40vh, 380px) !important;
+}
+
+/* VS battle — large duel frames */
+.arena-card-fullscreen.arena-card-battle .arena-battle-stage .arena-portrait.arena-portrait-square {
+  width: min(44vmin, 58vh, 620px) !important;
+  height: min(44vmin, 58vh, 620px) !important;
+}
+
+.arena-card-fullscreen .arena-bystanders .arena-portrait.arena-portrait-square {
+  width: min(72px, 12vmin) !important;
+  height: min(72px, 12vmin) !important;
+}
+
+/* Group events */
+.arena-card-fullscreen.arena-card-group .arena-group-member .arena-portrait.arena-portrait-square {
+  width: min(36vmin, 44vh, 480px) !important;
+  height: min(36vmin, 44vh, 480px) !important;
+}
+
 /* --- VS Battle Card --- */
 .arena-card-battle {
   animation: slideUp 0.4s ease both, cannonFlash 1.2s ease both;
+}
+.arena-card-battle.arena-card-fullscreen {
+  animation: epicCardReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both, cannonFlash 1.2s ease both;
 }
 
 .arena-battle-stage {
@@ -702,11 +901,20 @@
   padding: 24px 20px 8px;
   position: relative;
 }
+.arena-card-fullscreen .arena-battle-stage {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 12px 12px;
+  gap: clamp(4px, 2vmin, 16px);
+}
 
 .arena-side {
   display: flex;
   gap: 16px;
   flex: 1;
+}
+.arena-card-fullscreen .arena-side {
+  gap: 24px;
 }
 
 .arena-side-attacker {
@@ -726,6 +934,10 @@
   gap: 6px;
   min-width: 70px;
 }
+.arena-card-fullscreen .arena-fighter {
+  gap: 10px;
+  min-width: 120px;
+}
 
 .arena-fighter-name {
   font-family: var(--font-display);
@@ -738,6 +950,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.arena-card-fullscreen .arena-fighter-name {
+  font-size: clamp(14px, 1.8vw, 20px);
+  max-width: 180px;
 }
 
 .arena-fighter-dead {
@@ -755,6 +971,11 @@
   border-radius: 2px;
   background: rgba(230, 57, 70, 0.1);
 }
+.arena-card-fullscreen .arena-fighter-role {
+  font-size: 11px;
+  padding: 4px 14px;
+  border-radius: 4px;
+}
 
 .arena-fighter-role-dead {
   color: var(--dead);
@@ -771,6 +992,9 @@
   flex-shrink: 0;
   z-index: 1;
 }
+.arena-card-fullscreen .arena-vs-badge {
+  width: 100px;
+}
 
 .arena-vs-text {
   font-family: var(--font-display);
@@ -784,6 +1008,10 @@
   z-index: 2;
   animation: scaleIn 0.4s ease 0.2s both;
 }
+.arena-card-fullscreen .arena-vs-text {
+  font-size: clamp(36px, 5vw, 56px);
+  text-shadow: 0 0 30px var(--accent-glow);
+}
 
 .arena-vs-slash {
   position: absolute;
@@ -793,6 +1021,11 @@
   transform: rotate(15deg);
   opacity: 0.4;
 }
+.arena-card-fullscreen .arena-vs-slash {
+  height: 160px;
+  width: 3px;
+  opacity: 0.5;
+}
 
 .arena-bystanders {
   display: flex;
@@ -801,10 +1034,17 @@
   padding: 8px 20px 0;
   opacity: 0.6;
 }
+.arena-card-fullscreen .arena-bystanders {
+  gap: 12px;
+  padding: 12px 32px 0;
+}
 
 /* --- Solo Death Card --- */
 .arena-card-solo-death {
   animation: slideUp 0.4s ease both, cannonFlash 1.2s ease both;
+}
+.arena-card-solo-death.arena-card-fullscreen {
+  animation: epicCardReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both, cannonFlash 1.2s ease both;
 }
 
 .arena-solo-stage {
@@ -813,11 +1053,30 @@
   gap: 16px;
   padding: 20px 20px 4px;
 }
+.arena-card-fullscreen .arena-solo-stage {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 16px 8px;
+}
 
 .arena-solo-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+.arena-card-fullscreen .arena-solo-info {
+  align-items: center;
+  gap: 8px;
+}
+.arena-card-fullscreen .arena-solo-info .arena-fighter-name {
+  font-size: clamp(18px, 2.5vw, 28px);
+  max-width: none;
+}
+.arena-card-fullscreen .arena-solo-info .arena-fighter-role {
+  font-size: 12px;
+  padding: 4px 16px;
 }
 
 /* --- Group Card --- */
@@ -828,12 +1087,21 @@
   padding: 20px 20px 8px;
   justify-content: center;
 }
+.arena-card-fullscreen.arena-card-group .arena-group-portraits {
+  flex: 1;
+  min-height: 0;
+  gap: clamp(12px, 3vmin, 24px);
+  padding: 12px 16px 8px;
+}
 
 .arena-group-member {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+}
+.arena-card-fullscreen .arena-group-member {
+  gap: 8px;
 }
 
 .arena-group-name {
@@ -848,6 +1116,10 @@
   white-space: nowrap;
   text-align: center;
 }
+.arena-card-fullscreen .arena-group-name {
+  font-size: 14px;
+  max-width: 120px;
+}
 
 /* --- Standard Card --- */
 .arena-card-standard .arena-standard-portraits {
@@ -855,9 +1127,22 @@
   gap: 8px;
   padding: 16px 20px 0;
 }
+.arena-card-fullscreen.arena-card-standard .arena-standard-portraits {
+  flex: 1;
+  min-height: 0;
+  flex-wrap: wrap;
+  gap: clamp(12px, 3vmin, 28px);
+  padding: 12px 16px 8px;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+}
 
 .arena-card-has-death {
   animation: slideUp 0.4s ease both, cannonFlash 1s ease both;
+}
+.arena-card-has-death.arena-card-fullscreen {
+  animation: epicCardReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both, cannonFlash 1s ease both;
 }
 
 @media (max-width: 600px) {
@@ -872,6 +1157,12 @@
     transform: rotate(90deg);
     width: 60px;
     height: 2px;
+  }
+  .arena-card-fullscreen .arena-fighter {
+    min-width: 80px;
+  }
+  .fullscreen-card-viewport {
+    max-width: 100%;
   }
 }
 

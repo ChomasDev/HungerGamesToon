@@ -89,12 +89,34 @@ export default function CustomizationDrawer({
           </select>
           <span className="drawer-hint">
             {gameSettings.killsPerRoundMode === 'random'
-              ? 'No limit — deaths happen naturally based on event pool.'
+              ? 'Caps below prevent entire rosters from dying in a single day/night. Use 0 for uncapped chaos.'
               : gameSettings.killsPerRoundMode === 'exact'
                 ? 'Exactly this many deaths per round (0 = peaceful round possible).'
                 : 'A random number of deaths between min and max each round.'}
           </span>
         </div>
+
+        {gameSettings.killsPerRoundMode === 'random' && (
+          <div className="drawer-section">
+            <label>
+              Max deaths per phase:{' '}
+              {gameSettings.randomRoundDeathCap === 0 ? 'Unlimited' : gameSettings.randomRoundDeathCap}
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={20}
+              step={1}
+              value={gameSettings.randomRoundDeathCap}
+              onChange={(e) => onGameSettingsChange({ randomRoundDeathCap: Number(e.target.value) })}
+            />
+            <div className="range-labels">
+              <span>0 — off</span>
+              <span>10</span>
+              <span>20</span>
+            </div>
+          </div>
+        )}
 
         {gameSettings.killsPerRoundMode === 'exact' && (
           <div className="drawer-section">

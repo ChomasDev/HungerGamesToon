@@ -19,7 +19,6 @@ export interface TributeCharacterSelectOptions {
   custom_pronouns?: string
   pronoun_option: PronounSetting
   image_url?: string
-  subtitle?: string
 }
 
 export interface TributeOptions {

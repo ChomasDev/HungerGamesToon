@@ -98,7 +98,6 @@ export const it = {
   backToLobby: 'Torna al menu',
 
   tributeNamePh: 'Nome tributo',
-  taglinePh: 'Slogan o squadra...',
   pronounHe: 'Lui',
   pronounShe: 'Lei',
   pronounThey: 'Loro',

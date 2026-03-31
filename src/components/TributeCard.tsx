@@ -60,13 +60,6 @@ export default function TributeCard({ tribute, index, onUpdate, onRemove }: Trib
           onChange={(e) => onUpdate(tribute.id, { name: e.target.value })}
           placeholder={it.tributeNamePh}
         />
-        <input
-          className="subtitle-input"
-          type="text"
-          value={tribute.subtitle ?? ''}
-          onChange={(e) => onUpdate(tribute.id, { subtitle: e.target.value })}
-          placeholder={it.taglinePh}
-        />
         <div className="tribute-card-pronoun">
           <select
             value={tribute.pronoun_option}

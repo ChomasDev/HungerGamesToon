@@ -181,6 +181,7 @@ function parsePronounSetting(option: PronounSetting, customStr?: string): {
       }
     }
   }
+  return { uses_pronouns: false, plural: false }
 }
 
 const enum GameState {

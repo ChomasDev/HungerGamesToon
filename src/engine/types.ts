@@ -141,6 +141,31 @@ export class Event {
   }
 }
 
+const validSlot = (idx: number, n: number) => Number.isInteger(idx) && idx >= 0 && idx < n
+
+/**
+ * Uses valid `killers` entries when present. If none remain (empty or only out-of-range indices),
+ * infers killers when there is exactly **one** distinct victim slot in `fatalities` (handles
+ * duplicate fatality indices in JSON and omitted `killers`). Every other scene slot is a killer.
+ */
+export function resolvedKillerIndices(event: Pick<Event, 'killers' | 'fatalities' | 'players_involved'>): number[] {
+  const n = event.players_involved
+  const explicit = event.killers.filter((k) => validSlot(k, n))
+  if (explicit.length > 0) return explicit
+
+  const victims = new Set<number>()
+  for (const f of event.fatalities) {
+    if (validSlot(f, n)) victims.add(f)
+  }
+  if (victims.size !== 1) return []
+  const victim = Array.from(victims)[0]!
+  const killers: number[] = []
+  for (let i = 0; i < n; i++) {
+    if (i !== victim) killers.push(i)
+  }
+  return killers
+}
+
 function calculateTributesInvolved(raw_message: string): number {
   const v_raw = raw_message
     .match(/%[NAGRsyih!w]?(\d)/g)

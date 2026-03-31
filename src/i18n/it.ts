@@ -111,6 +111,14 @@ export const it = {
   killer: 'Assassino',
   eliminated: 'Eliminato',
 
+  ccgPower: 'AZIONE',
+  killCountTitle: (n: number) => (n === 1 ? '1 uccisione' : `${n} uccisioni`),
+  ccgKillBadgeLabel: 'UCC.',
+  /** Shown on duel cards when there is no usable portrait image */
+  comicPortraitEmpty: 'RITRATTO',
+  tradingCardKind: 'Tributo',
+  tradingCardStars: (n: number) => (n === 1 ? '★ 1' : `★ ${n}`),
+
   errorNeedTwoTributes: 'Servono almeno 2 tributi per iniziare!',
   errorLoadCharacters: 'Impossibile caricare i personaggi',
   errorLoadEvents: 'Impossibile caricare gli eventi',

@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { PronounSetting, type TributeCharacterSelectOptions } from '../engine/types'
 import { it } from '../i18n/it'
+import { getInitials } from '../utils/initials'
 
 interface TributeCardProps {
   tribute: TributeCharacterSelectOptions
@@ -20,23 +21,8 @@ export default function TributeCard({ tribute, index, onUpdate, onRemove }: Trib
     }
   }
 
-  function getInitials(name: string) {
-    return name
-      .split(/\s+/)
-      .map((w) => w[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase()
-  }
-
   return (
     <div className="tribute-card" style={{ animationDelay: `${index * 50}ms` }}>
-      <div className="tribute-card-actions">
-        <button onClick={() => onRemove(tribute.id)} title={it.removeTribute}>
-          &times;
-        </button>
-      </div>
-
       <div className="tribute-card-portrait" onClick={() => fileRef.current?.click()}>
         {tribute.image_url ? (
           <img src={tribute.image_url} alt={tribute.name} />
@@ -51,6 +37,20 @@ export default function TributeCard({ tribute, index, onUpdate, onRemove }: Trib
           style={{ display: 'none' }}
           onChange={handleImageUpload}
         />
+      </div>
+
+      <div className="tribute-card-actions">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemove(tribute.id)
+          }}
+          title={it.removeTribute}
+          aria-label={it.removeTribute}
+        >
+          &times;
+        </button>
       </div>
 
       <div className="tribute-card-body">

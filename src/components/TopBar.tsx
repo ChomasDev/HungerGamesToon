@@ -23,7 +23,12 @@ export default function TopBar({
 
   return (
     <header className="top-bar">
-      <div className="top-bar-logo">{it.topBarLogo}</div>
+      <div className="top-bar-logo">
+        <div className="top-bar-logo-icon-wrapper">
+          <span className="top-bar-logo-icon" />
+        </div>
+        {it.topBarLogo}
+      </div>
 
       {showGameControls && renderState ? (
         <>
@@ -39,12 +44,16 @@ export default function TopBar({
           </div>
           <span className="top-bar-title">{seasonTitle}</span>
           <div className="top-bar-actions">
-            <button className="btn-icon" onClick={onSettingsClick} title={it.settingsTitle}>
-              &#9881;
-            </button>
-            <button className="btn btn-danger" onClick={onAbort}>
-              {it.abort}
-            </button>
+            <div className="top-bar-btn-wrapper">
+              <button className="btn-icon" onClick={onSettingsClick} title={it.settingsTitle}>
+                &#9881;
+              </button>
+            </div>
+            <div className="top-bar-btn-wrapper">
+              <button className="btn btn-danger" onClick={onAbort}>
+                {it.abort}
+              </button>
+            </div>
           </div>
         </>
       ) : (

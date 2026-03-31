@@ -70,8 +70,6 @@ type GameAction =
   | { type: 'SET_SEASON_TITLE'; title: string }
   | { type: 'START_GAME' }
   | { type: 'ADVANCE_GAME' }
-  /** Advance repeatedly until the in-game calendar day number increases (skip night / cannon / etc. in one jump). */
-  | { type: 'SKIP_TO_NEXT_DAY' }
   | { type: 'ABORT_GAME' }
   | { type: 'SET_ERROR'; error: string | null }
   | { type: 'SET_THEME'; theme: Partial<ThemeConfig> }
@@ -255,36 +253,6 @@ function gameReducer(state: GameStore, action: GameAction): GameStore {
         }
       }
       return { ...state, renderState }
-    }
-
-    case 'SKIP_TO_NEXT_DAY': {
-      if (!state.game || !state.renderState) return state
-      const game = state.game
-      const startDays = game.days_passed
-      let renderState: GameRenderStateData = state.renderState
-      let safety = 0
-      while (game.days_passed <= startDays && safety++ < 120) {
-        const next = game.advanceGame()
-        if (next instanceof Error) {
-          return { ...state, error: next.message }
-        }
-        renderState = next
-        if (next.state === RenderState.GAME_OVER) {
-          return {
-            ...state,
-            renderState: next,
-            screen: 'results',
-            error: null,
-            isAutoPlaying: false,
-          }
-        }
-      }
-      return {
-        ...state,
-        renderState,
-        error: null,
-        isAutoPlaying: false,
-      }
     }
 
     case 'ABORT_GAME':

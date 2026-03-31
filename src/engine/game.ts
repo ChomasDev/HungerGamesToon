@@ -14,8 +14,39 @@ import {
   type StoredEvent,
   type TributeCharacterSelectOptions,
   type TributePronouns,
+  resolvedKillerIndices,
 } from './types'
 import { builtinEvents } from './events'
+
+/**
+ * Simulation tracing: either
+ * - `localStorage.setItem('DEBUG_HG_SIM','1')` then reload, or
+ * - open the app with `?DEBUG_HG_SIM=1` in the URL.
+ * Unset localStorage key or omit the query param to silence.
+ */
+function simTraceEnabled(): boolean {
+  try {
+    if (globalThis.localStorage?.getItem('DEBUG_HG_SIM') === '1') return true
+  } catch {
+    /* private / blocked storage */
+  }
+  try {
+    if (typeof globalThis.location !== 'undefined') {
+      return new URLSearchParams(globalThis.location.search).get('DEBUG_HG_SIM') === '1'
+    }
+  } catch {
+    /* noop */
+  }
+  return false
+}
+
+function simDebug(...args: unknown[]) {
+  if (simTraceEnabled()) console.log('[HG sim]', ...args)
+}
+
+function simWarn(...args: unknown[]) {
+  if (simTraceEnabled()) console.warn('[HG sim]', ...args)
+}
 
 export interface KillLimitConfig {
   mode: 'random' | 'exact' | 'range'
@@ -77,7 +108,10 @@ function composeEventMessage(event: GameEventData): FormattedMessage {
         const name = event.players_involved[m[i].charCodeAt(0) - char_zero].name
         composed.push(name)
         i++
-        if (i >= m.length) break outer
+        if (i >= m.length) {
+          prev = i
+          break outer
+        }
         break
       }
       case 'N': case 'A': case 'G': case 'R':
@@ -215,6 +249,11 @@ export class Game {
   readonly eventsPerPhaseMin: number
   readonly eventsPerPhaseMax: number
 
+  /** Night phase is resolved in the engine but the UI may still be stepping scenes; next step should open the cannon (caduti). */
+  isAwaitingFallenInterstitial(): boolean {
+    return this.state === GameState.THE_FALLEN
+  }
+
   constructor(
     tributes: Tribute[],
     events: EventList<Event>,
@@ -235,6 +274,9 @@ export class Game {
     this.eventsPerPhaseMax = eMax
     this.event_list = { bloodbath: [], day: [], night: [], feast: [] }
     this.addEvents(events)
+    if (simTraceEnabled()) {
+      console.info('[HG sim] Tracing on — localStorage DEBUG_HG_SIM=1 and/or ?DEBUG_HG_SIM=1')
+    }
   }
 
   private addEvents(eventOptionList: EventList<Event>) {
@@ -367,10 +409,17 @@ export class Game {
       default: throw Error(`Invalid game stage`)
     }
 
-    if (!eventList.length) return
+    if (!eventList.length) {
+      simDebug('phase skipped — no events for stage', this.stage, 'round#', round.index)
+      return
+    }
     let diedThisRound = 0
     const deathCap = this.getDeathCapForRound()
     const targetEventCount = random(this.eventsPerPhaseMin, this.eventsPerPhaseMax + 1)
+    simDebug(`phase ${this.stage} round#${round.index}`, 'shuffle:', this.tributes_alive.map((t) => t.raw_name), {
+      deathCap,
+      targetEventCount,
+    })
 
     outer: while (tributesLeft) {
       const tributes_involved: Tribute[] = []
@@ -382,19 +431,50 @@ export class Game {
       } while (!this.requirementsSatisfied(event, currentTribute, tributesLeft, diedThisRound, deathCap))
       tributesLeft -= event.players_involved
 
+      const windowNames: string[] = []
+      for (let i = 0; i < event.players_involved; i++) {
+        const t = this.tributes_alive[currentTribute + i]
+        windowNames.push(t ? t.raw_name : `<?@${currentTribute + i}>`)
+      }
+
       for (const f of event.fatalities) {
-        this.tributes_alive[currentTribute + f].died_in_round = round
-        round.died_this_round.push(this.tributes_alive[currentTribute + f])
+        const abs = currentTribute + f
+        if (f < 0 || f >= event.players_involved) {
+          simWarn('fatality index outside window', { f, players_involved: event.players_involved, msg: event.message })
+        }
+        if (abs < 0 || abs >= this.tributes_alive.length) {
+          simWarn('fatality OOB', { abs, len: this.tributes_alive.length, msg: event.message })
+          continue
+        }
+        const victim = this.tributes_alive[abs]
+        if (victim.died_in_round !== undefined) {
+          simWarn('fatality on already-eliminated tribute', { name: victim.raw_name, msg: event.message })
+        }
+        simDebug('KILL', {
+          victim: victim.raw_name,
+          windowIndex: f,
+          arrayIndex: abs,
+          window: windowNames,
+          eventSnippet: event.message.slice(0, 100),
+        })
+        victim.died_in_round = round
+        round.died_this_round.push(victim)
         tributesAlive--
         diedThisRound++
       }
 
-      for (const k of event.killers) {
-        this.tributes_alive[currentTribute + k].kills += event.fatalities.length
+      for (const k of resolvedKillerIndices(event)) {
+        if (k < 0 || k >= event.players_involved) {
+          simWarn('killer index outside window', { k, players_involved: event.players_involved, msg: event.message })
+        }
+        const abs = currentTribute + k
+        if (abs >= 0 && abs < this.tributes_alive.length) {
+          this.tributes_alive[abs].kills += event.fatalities.length
+        }
       }
 
-      const last = currentTribute + event.players_involved
-      for (; currentTribute < last; currentTribute++) {
+      const lastSlot = currentTribute + event.players_involved
+      for (; currentTribute < lastSlot; currentTribute++) {
         tributes_involved.push(this.tributes_alive[currentTribute])
       }
 
@@ -405,6 +485,11 @@ export class Game {
       }
       gameEvent.message = composeEventMessage(gameEvent)
       round.game_events.push(gameEvent)
+      simDebug(
+        `scene ${round.game_events.length}/${targetEventCount}`,
+        'text:',
+        gameEvent.message.map((p) => (typeof p === 'string' ? p : p.value)).join(''),
+      )
 
       if (round.game_events.length >= targetEventCount) break outer
 
@@ -412,7 +497,9 @@ export class Game {
       if (deathCap >= 0 && diedThisRound >= deathCap) break
     }
 
-    shuffle(round.game_events)
+    simDebug('phase end', round.stage, 'eliminated:', round.died_this_round.map((t) => t.raw_name), {
+      scenes: round.game_events.length,
+    })
     this.tributes_alive = this.tributes_alive.filter((t) => t.died_in_round === undefined)
     this.tributes_died.push(...round.died_this_round)
   }
@@ -420,7 +507,7 @@ export class Game {
   private doRound() {
     this.stage = this.advanceGameStage()
     this.doRoundImpl()
-    if (!this.checkGameShouldEnd() && this.stage === GameStage.NIGHT) {
+    if (!this.checkGameShouldEnd()) {
       this.state = GameState.THE_FALLEN
     }
   }

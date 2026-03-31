@@ -2,23 +2,13 @@ import { useCallback, useEffect } from 'react'
 import { RenderState, type GameRenderStateData } from '../engine/types'
 import { formatRoundDeathHeader, it, translateGameTitle } from '../i18n/it'
 import EventCard from './EventCard'
+import ArenaPortrait from './arena/ArenaPortrait'
 
 interface BroadcastStageProps {
   renderState: GameRenderStateData
   eventIndex: number
   onEventIndexChange: (index: number) => void
   onAdvanceGame?: () => void
-  /** Jump to the next in-game morning (skips remaining advances until `days_passed` increments). */
-  onSkipToNextDay?: () => void
-}
-
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
 }
 
 function StageNextButton({ onAdvance }: { onAdvance?: () => void }) {
@@ -36,7 +26,6 @@ export default function BroadcastStage({
   eventIndex,
   onEventIndexChange,
   onAdvanceGame,
-  onSkipToNextDay,
 }: BroadcastStageProps) {
   const { state, game_title, rounds, tributes_died, tributes_alive } = renderState
 
@@ -106,8 +95,10 @@ export default function BroadcastStage({
 
     return (
       <div className="center-stage fullscreen-stage">
-        <div className="round-banner round-banner-compact">
-          <h2>{title}</h2>
+        <div className="round-banner round-banner-compact round-banner-ccg">
+          <div className="round-banner-title-wrapper">
+            <h2>{title}</h2>
+          </div>
           <div className="round-counter">
             {hasNoEvents ? '—' : `${eventIndex + 1} / ${totalEvents}`}
           </div>
@@ -158,15 +149,6 @@ export default function BroadcastStage({
               >
                 {it.nextPhase}
               </button>
-              <button
-                type="button"
-                className="btn btn-secondary event-nav-btn"
-                onClick={() => onSkipToNextDay?.()}
-                disabled={!onSkipToNextDay}
-                title={it.nextDayTitle}
-              >
-                {it.nextDay}
-              </button>
             </div>
           ) : (
             <button type="button" className="btn btn-secondary event-nav-btn" onClick={goNextEvent}>
@@ -196,13 +178,14 @@ export default function BroadcastStage({
               <div className="death-portraits">
                 {tributes_died.map((tribute, i) => (
                   <div key={i} className="death-tribute" style={{ animationDelay: `${i * 100}ms` }}>
-                    <div className="death-tribute-avatar">
-                      {tribute.image_src ? (
-                        <img src={tribute.image_src} alt={tribute.raw_name} />
-                      ) : (
-                        getInitials(tribute.raw_name)
-                      )}
-                    </div>
+                    <ArenaPortrait
+                      src={tribute.image_src}
+                      name={tribute.raw_name}
+                      isDead
+                      eliminatedOverlay={false}
+                      size={60}
+                      className="!border-2 !border-dead !opacity-60 grayscale"
+                    />
                     <span className="death-tribute-name">{tribute.raw_name}</span>
                   </div>
                 ))}
@@ -227,13 +210,13 @@ export default function BroadcastStage({
           <div className="winner-portraits">
             {tributes_alive.map((tribute, i) => (
               <div key={i} className="winner-tribute" style={{ animationDelay: `${i * 200}ms` }}>
-                <div className="winner-avatar">
-                  {tribute.image_src ? (
-                    <img src={tribute.image_src} alt={tribute.raw_name} />
-                  ) : (
-                    getInitials(tribute.raw_name)
-                  )}
-                </div>
+                <ArenaPortrait
+                  src={tribute.image_src}
+                  name={tribute.raw_name}
+                  isDead={false}
+                  size={100}
+                  className="!border-[3px] !border-accent-gold shadow-[0_0_30px_rgba(255,215,0,0.3)] [animation:glowPulse_2s_ease-in-out_infinite]"
+                />
                 <span className="winner-name">{tribute.raw_name}</span>
                 <span className="winner-kills">
                   {it.kills(tribute.kills)}
@@ -294,11 +277,16 @@ export default function BroadcastStage({
                   style={{ animationDelay: `${i * 60}ms` }}
                 >
                   <div className="stat-card-avatar">
-                    {tribute.image_src ? (
-                      <img src={tribute.image_src} alt={tribute.raw_name} />
-                    ) : (
-                      getInitials(tribute.raw_name)
-                    )}
+                    <ArenaPortrait
+                      src={tribute.image_src}
+                      name={tribute.raw_name}
+                      isDead={!isWinner}
+                      eliminatedOverlay={false}
+                      size={44}
+                      className={
+                        isWinner ? '!border-2 !border-accent-gold' : ''
+                      }
+                    />
                   </div>
                   <div className="stat-card-info">
                     <div className="stat-card-name">{tribute.raw_name}</div>

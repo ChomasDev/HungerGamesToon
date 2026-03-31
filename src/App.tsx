@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './App.css'
 import { RenderState } from './engine/types'
 import { clearLocalGameDb, loadPersistedAppState, savePersistedAppState } from './db/localGameDb'
@@ -20,10 +20,11 @@ function App() {
   const roundEventIndexRef = useRef(0)
   roundEventIndexRef.current = roundEventIndex
 
-  const roundsLen = state.renderState?.rounds.length ?? 0
-  useEffect(() => {
+  /** Engine round identity; when this changes, scene index must reset before paint to avoid an extra ADVANCE_GAME. */
+  const currentRoundIndex = state.renderState?.rounds[state.renderState.rounds.length - 1]?.index ?? -1
+  useLayoutEffect(() => {
     setRoundEventIndex(0)
-  }, [roundsLen])
+  }, [currentRoundIndex])
 
   useEffect(() => {
     let cancelled = false
@@ -107,6 +108,7 @@ function App() {
 
   const stepGameForward = useCallback(() => {
     const rs = state.renderState
+    const game = state.game
     if (!rs) return
     if (rs.state === RenderState.ROUND_EVENTS) {
       const cur = rs.rounds[rs.rounds.length - 1]
@@ -115,13 +117,23 @@ function App() {
         dispatch({ type: 'ADVANCE_GAME' })
         return
       }
-      if (roundEventIndexRef.current < n - 1) {
+      let idx = roundEventIndexRef.current
+      const fallenPending = game?.isAwaitingFallenInterstitial?.() ?? false
+      if (idx >= n) {
+        if (fallenPending) {
+          dispatch({ type: 'ADVANCE_GAME' })
+          return
+        }
+        setRoundEventIndex(0)
+        return
+      }
+      if (idx < n - 1) {
         setRoundEventIndex((i) => i + 1)
         return
       }
     }
     dispatch({ type: 'ADVANCE_GAME' })
-  }, [state.renderState, dispatch])
+  }, [state.renderState, state.game, dispatch])
 
   const stepGameForwardRef = useRef(stepGameForward)
   stepGameForwardRef.current = stepGameForward
@@ -153,6 +165,13 @@ function App() {
 
   const themeAttr = state.theme.preset
   const motionAttr = state.theme.motionLevel
+
+  const lastRound = state.renderState?.rounds[state.renderState.rounds.length - 1]
+  const lastRoundEventCount = lastRound?.game_events.length ?? 0
+  const safeEventIndex =
+    state.renderState?.state === RenderState.ROUND_EVENTS && lastRoundEventCount > 0
+      ? Math.min(roundEventIndex, lastRoundEventCount - 1)
+      : roundEventIndex
 
   const hideControlPrimaryDuringRound =
     state.renderState?.state === RenderState.ROUND_EVENTS && !state.isAutoPlaying
@@ -197,13 +216,9 @@ function App() {
           />
           <BroadcastStage
             renderState={state.renderState}
-            eventIndex={roundEventIndex}
+            eventIndex={safeEventIndex}
             onEventIndexChange={setRoundEventIndex}
-            onAdvanceGame={() => dispatch({ type: 'ADVANCE_GAME' })}
-            onSkipToNextDay={() => {
-              setRoundEventIndex(0)
-              dispatch({ type: 'SKIP_TO_NEXT_DAY' })
-            }}
+            onAdvanceGame={() => stepGameForward()}
           />
           <ControlRail
             onProceed={handleProceed}

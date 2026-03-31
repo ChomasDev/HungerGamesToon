@@ -56,20 +56,42 @@
   gap: 8px;
 }
 
-.top-bar-logo::before {
-  content: '★';
+.top-bar-logo-icon-wrapper {
+  display: inline-flex;
+  filter: 
+    drop-shadow(-2px -2px 0 var(--comic-ink)) 
+    drop-shadow(2px -2px 0 var(--comic-ink)) 
+    drop-shadow(2px 2px 0 var(--comic-ink)) 
+    drop-shadow(-2px 2px 0 var(--comic-ink))
+    drop-shadow(2px 2px 0 rgba(10, 10, 15, 0.2));
+  transform: translateZ(0);
+}
+
+.top-bar-logo-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   font-size: 14px;
   line-height: 1;
   background: var(--accent-secondary);
   color: var(--comic-ink);
-  border: 2px solid var(--comic-ink);
-  border-radius: 4px;
-  box-shadow: var(--comic-shadow-sm);
+  border: none;
+  border-radius: 0;
+  clip-path: polygon(
+    10% 0%,
+    90% 5%,
+    100% 30%,
+    95% 70%,
+    85% 100%,
+    15% 95%,
+    0% 70%,
+    5% 30%
+  );
+}
+.top-bar-logo-icon::before {
+  content: '★';
 }
 
 .top-bar-stats {
@@ -112,6 +134,47 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.top-bar-btn-wrapper {
+  display: inline-flex;
+  filter: 
+    drop-shadow(-2px -2px 0 var(--comic-ink)) 
+    drop-shadow(2px -2px 0 var(--comic-ink)) 
+    drop-shadow(2px 2px 0 var(--comic-ink)) 
+    drop-shadow(-2px 2px 0 var(--comic-ink))
+    drop-shadow(2px 2px 0 rgba(10, 10, 15, 0.2));
+  transform: translateZ(0); /* Fix for Safari filter rendering */
+}
+
+.top-bar-actions .btn,
+.top-bar-actions .btn-icon {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  clip-path: polygon(
+    5% 5%,
+    95% 0%,
+    100% 30%,
+    95% 95%,
+    10% 100%,
+    0% 70%
+  );
+}
+
+.top-bar-btn-wrapper:active {
+  transform: translateY(2px) translateZ(0);
+  filter: 
+    drop-shadow(-2px -2px 0 var(--comic-ink)) 
+    drop-shadow(2px -2px 0 var(--comic-ink)) 
+    drop-shadow(2px 2px 0 var(--comic-ink)) 
+    drop-shadow(-2px 2px 0 var(--comic-ink));
+}
+
+.top-bar-actions .btn:active,
+.top-bar-actions .btn-icon:active {
+  transform: none;
+  box-shadow: none !important;
 }
 
 /* ============================
@@ -461,23 +524,22 @@
   position: absolute;
   top: 8px;
   right: 8px;
+  z-index: 4;
   display: flex;
   gap: 4px;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
+  pointer-events: none;
 }
-.tribute-card:hover .tribute-card-actions {
-  opacity: 1;
-}
-
 .tribute-card-actions button {
-  width: 30px;
-  height: 30px;
+  pointer-events: auto;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-sm);
   background: var(--comic-paper);
   border: 2px solid var(--comic-ink);
   color: var(--comic-ink);
-  font-size: 14px;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -490,6 +552,10 @@
   color: var(--dead);
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 var(--comic-ink);
+}
+.tribute-card-actions button:focus-visible {
+  outline: 2px solid var(--accent-secondary);
+  outline-offset: 2px;
 }
 
 .add-tribute-card {
@@ -552,8 +618,9 @@
 
 /* Roster Sidebar */
 .roster-sidebar {
-  background: var(--bg-secondary);
-  border-right: 4px solid var(--comic-ink);
+  background: linear-gradient(180deg, #5a4888 0%, var(--bg-secondary) 38%, #3d2f62 100%);
+  border-right: 5px solid var(--comic-ink);
+  box-shadow: inset -6px 0 12px rgba(0, 0, 0, 0.12);
   padding: 16px;
   overflow-y: auto;
   animation: slideInLeft var(--transition-base);
@@ -638,12 +705,17 @@
 }
 
 .fullscreen-stage {
-  justify-content: center;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: stretch;
   min-height: 0;
   flex: 1;
   overflow: hidden;
-  padding: 8px 12px;
+  padding: 0;
+}
+
+.center-stage.fullscreen-stage {
+  padding: 0;
+  gap: 6px;
 }
 
 /* Round Banner */
@@ -689,9 +761,13 @@
 .arena-card-fullscreen .tribute-name-highlight {
   color: #d62850;
   -webkit-text-fill-color: #d62850;
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   text-shadow:
     2px 2px 0 var(--comic-paper),
-    -1px -1px 0 var(--comic-paper),
+    -2px 2px 0 var(--comic-ink),
     0 0 0 var(--comic-ink);
 }
 
@@ -699,18 +775,70 @@
    Full-screen Event Viewport
    ============================ */
 .fullscreen-card-viewport {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: center;
   width: 100%;
-  max-width: min(92vw, 1000px);
+  max-width: 100%;
   min-height: 0;
 }
 
 .round-banner-compact {
-  padding: 12px 0 0;
+  padding: 8px 8px 0;
   flex-shrink: 0;
+}
+
+/* CCG-style jagged title burst (broadcast phase name) */
+.round-banner-ccg {
+  padding: 8px 12px 4px;
+}
+
+.round-banner-title-wrapper {
+  display: inline-block;
+  margin: 0 auto;
+  filter: 
+    drop-shadow(-3px -3px 0 var(--comic-ink)) 
+    drop-shadow(3px -3px 0 var(--comic-ink)) 
+    drop-shadow(3px 3px 0 var(--comic-ink)) 
+    drop-shadow(-3px 3px 0 var(--comic-ink)) 
+    drop-shadow(0 6px 0 rgba(10, 10, 15, 0.15));
+  transform: translateZ(0);
+}
+
+.round-banner-ccg h2 {
+  display: block;
+  margin: 0;
+  padding: 0.35em 1.1em 0.45em;
+  font-size: clamp(1.35rem, 3.8vw, 2.35rem) !important;
+  color: #ff6b2a !important;
+  -webkit-text-fill-color: #ff6b2a !important;
+  background: linear-gradient(180deg, #fffef8 0%, #ffe8a8 100%);
+  border: none;
+  border-radius: 0;
+  clip-path: polygon(
+    2% 12%,
+    10% 0%,
+    22% 8%,
+    38% 0%,
+    52% 10%,
+    68% 2%,
+    82% 12%,
+    96% 4%,
+    100% 28%,
+    94% 48%,
+    100% 68%,
+    96% 88%,
+    82% 96%,
+    64% 100%,
+    48% 92%,
+    32% 100%,
+    14% 94%,
+    0% 78%,
+    6% 52%,
+    0% 28%
+  );
 }
 
 .round-counter {
@@ -841,40 +969,60 @@
 
 .arena-card-fullscreen {
   width: 100%;
-  max-height: min(68vh, 820px);
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  border-radius: calc(var(--radius-lg) + 4px);
-  border: 5px solid var(--comic-ink);
+  border-radius: 0;
+  border: none;
   background:
     linear-gradient(165deg, rgba(255, 255, 255, 0.14) 0%, transparent 38%),
     linear-gradient(225deg, transparent 55%, rgba(0, 0, 0, 0.12) 100%),
     var(--bg-card);
-  box-shadow:
-    var(--comic-shadow-hover),
-    0 0 0 4px var(--accent-secondary),
-    0 0 0 8px var(--comic-ink);
+  box-shadow: none;
   animation: epicCardReveal 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.arena-card-fullscreen .arena-card-stripe {
+  display: none;
 }
 
 .arena-card-fullscreen.arena-card-battle {
   position: relative;
   overflow: hidden;
+  border: none;
+  box-shadow: none;
+  background:
+    radial-gradient(ellipse 70% 45% at 12% 88%, rgba(255, 220, 100, 0.55) 0%, transparent 58%),
+    radial-gradient(ellipse 70% 45% at 90% 86%, rgba(50, 140, 255, 0.5) 0%, transparent 58%),
+    repeating-linear-gradient(-38deg, transparent 0 16px, rgba(0, 0, 0, 0.045) 16px 17px),
+    linear-gradient(
+      118deg,
+      #ffb347 0%,
+      #ff7b39 24%,
+      #ffe566 40%,
+      #2f6fbf 40.5%,
+      #4a9fff 56%,
+      #0d1f3a 100%
+    );
 }
 
 .arena-card-fullscreen.arena-card-battle::before {
   content: '';
   position: absolute;
-  inset: -35%;
-  background: repeating-conic-gradient(
-    from 0deg at 50% 42%,
-    transparent 0deg 7deg,
-    rgba(255, 255, 255, 0.07) 7deg 8deg
+  inset: 0;
+  background: radial-gradient(
+    circle at 1px 1px,
+    rgba(255, 255, 255, 0.11) 1px,
+    transparent 1.5px
   );
+  background-size: 12px 12px;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.95;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
 }
 
 .arena-card-fullscreen.arena-card-battle > *:not(.arena-card-stripe) {
@@ -888,6 +1036,17 @@
   left: 0;
   height: 100%;
   z-index: 3;
+}
+
+/* Fullscreen 1v1 duel: same clear stage as trading-card actions (overlapping cards) */
+.arena-card.arena-card-battle.arena-card-battle-trading.arena-card-fullscreen {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  align-items: center;
+}
+.arena-card.arena-card-battle.arena-card-battle-trading.arena-card-fullscreen::before {
+  display: none;
 }
 
 @keyframes epicCardReveal {
@@ -964,6 +1123,11 @@
   border-right: 9px solid transparent;
   border-bottom: 12px solid var(--comic-paper);
   z-index: 1;
+}
+
+.arena-card-fullscreen.arena-card-battle .arena-event-body.ccg-event-narrative {
+  margin: 6px 12px 10px;
+  padding: 12px 16px 14px;
 }
 
 .arena-event-text {
@@ -1083,9 +1247,16 @@
   height: min(22vmin, 26vh, 220px) !important;
 }
 
-.arena-card-fullscreen.arena-card-battle .arena-battle-stage .arena-portrait.arena-portrait-square {
+/* Legacy VS row only: CCG art uses embed portraits without `.arena-portrait`. */
+.arena-card-fullscreen.arena-card-battle .arena-battle-stage .arena-fighter .arena-portrait.arena-portrait-square {
   width: min(32vmin, 40vh, 340px) !important;
   height: min(32vmin, 40vh, 340px) !important;
+}
+
+/* Must beat the rule above when chips sit inside `.arena-battle-stage`. */
+.arena-card-fullscreen.arena-card-battle .arena-bystanders .arena-portrait.arena-portrait-square {
+  width: min(56px, 10vmin) !important;
+  height: min(56px, 10vmin) !important;
 }
 
 .arena-card-fullscreen .arena-bystanders .arena-portrait.arena-portrait-square {
@@ -1127,8 +1298,14 @@
 .arena-card-fullscreen .arena-battle-stage {
   flex: 1;
   min-height: 0;
-  padding: 16px 12px 10px;
-  gap: 10px;
+  padding: 10px 10px 6px;
+  gap: 8px;
+}
+
+/* Compact CCG versus: less vertical padding so cards + narrative fit without scroll */
+.arena-card-fullscreen.arena-card-battle .arena-battle-stage.ccg-battle-stage {
+  padding: 6px 8px 4px;
+  gap: 6px;
 }
 
 .arena-card-fullscreen .arena-battle-row {
@@ -1395,6 +1572,14 @@
   animation: epicCardReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both, cannonFlash 1.2s ease both;
 }
 
+/* Fullscreen solo death: trading-card + yellow narrative (same language as action / fight) */
+.arena-card.arena-card-solo-death.arena-card-solo-death-trading.arena-card-fullscreen {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  align-items: center;
+}
+
 .arena-solo-stage {
   display: flex;
   align-items: center;
@@ -1467,6 +1652,51 @@
 .arena-card-fullscreen .arena-group-name {
   font-size: 14px;
   max-width: 120px;
+}
+
+/* Fullscreen single-tribute scene: Pokémon-style card, no purple stage panel */
+.arena-card.arena-card-standard.arena-card-standard-trading.arena-card-fullscreen {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  align-items: center;
+}
+.arena-card.arena-card-standard.arena-card-standard-trading.arena-card-fullscreen .arena-card-stripe {
+  display: none;
+}
+
+/* Fullscreen group (3+) — same floating deck, no purple panel */
+.arena-card.arena-card-group.arena-card-group-trading.arena-card-fullscreen {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Yellow “move” panel: names must stay readable (avoid raw red on yellow) */
+.trading-card-narrative .tribute-name-highlight {
+  display: inline;
+  padding: 0.1em 0.35em;
+  margin: 0 0.04em;
+  color: #7f1d1d !important;
+  -webkit-text-fill-color: #7f1d1d !important;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.96);
+  border: 2px solid var(--comic-ink);
+  border-radius: 4px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  text-shadow:
+    1px 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 var(--comic-ink);
+}
+
+.trading-card-narrative .trading-card-narrative-text {
+  position: relative;
+  z-index: 0;
 }
 
 /* --- Standard Card --- */

@@ -1,4 +1,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:ital,wght@0,400;0,700;1,400&family=Fredoka:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+@theme inline {
+  --color-comic-ink: var(--comic-ink);
+  --color-comic-ink-muted: var(--comic-ink-muted);
+  --color-comic-paper: var(--comic-paper);
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-tertiary: var(--bg-tertiary);
+  --color-bg-card: var(--bg-card);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-gold: var(--accent-gold);
+  --color-alive: var(--alive);
+  --color-dead: var(--dead);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+}
 
 *,
 *::before,

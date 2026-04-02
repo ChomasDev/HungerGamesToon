@@ -7,6 +7,7 @@ import {
   titleCase,
   type EventList,
   type FormattedMessage,
+  calculateTributesInvolved,
   type GameEventData,
   type GameRenderStateData,
   type GameRound,
@@ -82,7 +83,7 @@ function shuffle<T>(array: T[]): T[] {
   return array
 }
 
-function composeEventMessage(event: GameEventData): FormattedMessage {
+export function composeGameEventMessage(event: GameEventData): FormattedMessage {
   function check_bounds(ev: GameEventData, index: number) {
     if (index >= ev.event.players_involved)
       throw Error(`Index out of bounds in event '${ev.event.message}'`)
@@ -149,6 +150,79 @@ function composeEventMessage(event: GameEventData): FormattedMessage {
   }
   if (prev < m.length) composed.push(m.slice(prev))
   return composed
+}
+
+/** Preview composed narrative without mutating the live scene (uses a throwaway `Event` instance). */
+export function formatNarrativePreview(ge: GameEventData, draftMessage: string): FormattedMessage | null {
+  const trimmed = draftMessage.trim()
+  try {
+    const e = new Event(trimmed, [...ge.event.fatalities], [...ge.event.killers], ge.event.type)
+    e.players_involved = Math.max(e.players_involved, ge.players_involved.length)
+    const synthetic: GameEventData = { event: e, players_involved: ge.players_involved, message: [] }
+    synthetic.message = composeGameEventMessage(synthetic)
+    return synthetic.message
+  } catch {
+    return null
+  }
+}
+
+/** Update scene template text and recompose the formatted message; rolls back on failure. */
+export function tryPatchGameEventNarrative(ge: GameEventData, message: string): Error | null {
+  const trimmed = message.trim()
+  const prevMsg = ge.event.message
+  const prevPI = ge.event.players_involved
+  const prevFormatted = ge.message
+  try {
+    ge.event.message = trimmed
+    const fromMsg = calculateTributesInvolved(trimmed)
+    ge.event.players_involved = Math.max(fromMsg, ge.players_involved.length)
+    ge.message = composeGameEventMessage(ge)
+    return null
+  } catch (e) {
+    ge.event.message = prevMsg
+    ge.event.players_involved = prevPI
+    ge.message = prevFormatted
+    return e instanceof Error ? e : new Error(String(e))
+  }
+}
+
+function dummyTributesForPreviewCount(n: number): Tribute[] {
+  const out: Tribute[] = []
+  for (let i = 0; i < n; i++) {
+    out.push(
+      new Tribute(`Tributo ${i + 1}`, {
+        uses_pronouns: true,
+        pronouns: {
+          nominative: 'egli',
+          accusative: 'lui',
+          genitive: 'suo',
+          reflexive: 'sé stesso',
+        },
+        plural: false,
+        image: '',
+      }),
+    )
+  }
+  return out
+}
+
+/** Preview a stored event template with placeholder tributi (lobby editor). */
+export function previewStoredEventNarrative(
+  stored: Pick<StoredEvent, 'message' | 'fatalities' | 'killers' | 'type'>,
+): FormattedMessage | null {
+  const trimmed = stored.message.trim()
+  try {
+    const type = stored.type?.trim() || 'CUSTOM'
+    const e = new Event(trimmed, [...stored.fatalities], [...stored.killers], type)
+    const n = Math.max(e.players_involved, 1)
+    e.players_involved = n
+    const players = dummyTributesForPreviewCount(n)
+    const ge: GameEventData = { event: e, players_involved: players, message: [] }
+    ge.message = composeGameEventMessage(ge)
+    return ge.message
+  } catch {
+    return null
+  }
 }
 
 function parsePronounSetting(option: PronounSetting, customStr?: string): {
@@ -484,7 +558,7 @@ export class Game {
         players_involved: tributes_involved,
         message: [],
       }
-      gameEvent.message = composeEventMessage(gameEvent)
+      gameEvent.message = composeGameEventMessage(gameEvent)
       round.game_events.push(gameEvent)
       simDebug(
         `scene ${round.game_events.length}/${targetEventCount}`,

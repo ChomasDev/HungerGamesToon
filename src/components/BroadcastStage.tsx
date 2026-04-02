@@ -1,6 +1,7 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { RenderState, type GameRenderStateData } from '../engine/types'
 import { formatRoundDeathHeader, it, translateGameTitle } from '../i18n/it'
+import EditSceneActionModal from './EditSceneActionModal'
 import EventCard from './EventCard'
 import ArenaPortrait from './arena/ArenaPortrait'
 
@@ -9,6 +10,7 @@ interface BroadcastStageProps {
   eventIndex: number
   onEventIndexChange: (index: number) => void
   onAdvanceGame?: () => void
+  onUpdateSceneNarrative?: (payload: { roundIndex: number; sceneIndex: number; message: string }) => void
 }
 
 function StageNextButton({ onAdvance }: { onAdvance?: () => void }) {
@@ -26,8 +28,10 @@ export default function BroadcastStage({
   eventIndex,
   onEventIndexChange,
   onAdvanceGame,
+  onUpdateSceneNarrative,
 }: BroadcastStageProps) {
   const { state, game_title, rounds, tributes_died, tributes_alive } = renderState
+  const [editModalOpen, setEditModalOpen] = useState(false)
 
   const title = translateGameTitle(game_title)
   const currentRound = rounds[rounds.length - 1]
@@ -46,6 +50,7 @@ export default function BroadcastStage({
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (state !== RenderState.ROUND_EVENTS || !onAdvanceGame) return
+      if (editModalOpen) return
       const t = e.target as HTMLElement
       if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return
 
@@ -68,7 +73,7 @@ export default function BroadcastStage({
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [state, onAdvanceGame, goPrevEvent, goNextEvent, isLastEvent, hasNoEvents])
+  }, [state, onAdvanceGame, goPrevEvent, goNextEvent, isLastEvent, hasNoEvents, editModalOpen])
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -90,8 +95,13 @@ export default function BroadcastStage({
     return () => window.removeEventListener('keydown', handleKey)
   }, [state, onAdvanceGame])
 
+  useEffect(() => {
+    setEditModalOpen(false)
+  }, [eventIndex, state, currentRound?.index])
+
   if (state === RenderState.ROUND_EVENTS) {
     const currentEvent = currentRound?.game_events[eventIndex]
+    const roundIndex = rounds.length - 1
 
     return (
       <div className="center-stage fullscreen-stage">
@@ -103,6 +113,25 @@ export default function BroadcastStage({
             {hasNoEvents ? '—' : `${eventIndex + 1} / ${totalEvents}`}
           </div>
         </div>
+
+        {currentEvent && onUpdateSceneNarrative && (
+          <div className="scene-edit-toolbar">
+            <button type="button" className="btn btn-secondary scene-edit-open-btn" onClick={() => setEditModalOpen(true)}>
+              {it.editSceneAction}
+            </button>
+          </div>
+        )}
+
+        {onUpdateSceneNarrative && (
+          <EditSceneActionModal
+            isOpen={editModalOpen}
+            gameEvent={currentEvent ?? null}
+            onClose={() => setEditModalOpen(false)}
+            onSave={(message) => {
+              onUpdateSceneNarrative({ roundIndex, sceneIndex: eventIndex, message })
+            }}
+          />
+        )}
 
         <div className="fullscreen-card-viewport">
           {currentEvent && (

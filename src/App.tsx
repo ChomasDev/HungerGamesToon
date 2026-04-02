@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { RenderState } from './engine/types'
+import { RenderState, resolvedKillerIndices, type Tribute } from './engine/types'
 import { clearLocalGameDb, loadPersistedAppState, savePersistedAppState } from './db/localGameDb'
 import { useGameStore, type GameSettings, type ThemeConfig } from './store/gameStore'
 import TopBar from './components/TopBar'
@@ -173,6 +173,54 @@ function App() {
       ? Math.min(roundEventIndex, lastRoundEventCount - 1)
       : roundEventIndex
 
+  /**
+   * During phase playback: roster “alive” and kill badges stay in sync with scenes already reached
+   * (deaths and kill credit from later scenes in the same phase are hidden).
+   */
+  const { rosterAlive, rosterKillSubtrahend } = useMemo(() => {
+    const emptySub = new Map<Tribute, number>()
+    const rs = state.renderState
+    if (!rs) return { rosterAlive: [] as Tribute[], rosterKillSubtrahend: emptySub }
+
+    if (rs.state !== RenderState.ROUND_EVENTS) {
+      return { rosterAlive: rs.tributes_alive, rosterKillSubtrahend: emptySub }
+    }
+
+    const round = rs.rounds[rs.rounds.length - 1]
+    if (!round || round.game_events.length === 0) {
+      return { rosterAlive: rs.tributes_alive, rosterKillSubtrahend: emptySub }
+    }
+
+    const idx = Math.min(roundEventIndex, round.game_events.length - 1)
+    const revealedDead = new Set<Tribute>()
+    for (let i = 0; i <= idx; i++) {
+      const ge = round.game_events[i]!
+      const n = ge.event.players_involved
+      for (const f of ge.event.fatalities) {
+        if (f >= 0 && f < n && f < ge.players_involved.length) {
+          revealedDead.add(ge.players_involved[f]!)
+        }
+      }
+    }
+    const notYetRevealed = round.died_this_round.filter((t) => !revealedDead.has(t))
+    const alive = [...rs.tributes_alive, ...notYetRevealed]
+
+    const rosterKillSubtrahend = new Map<Tribute, number>()
+    for (let j = idx + 1; j < round.game_events.length; j++) {
+      const ge = round.game_events[j]!
+      const add = ge.event.fatalities.length
+      if (add === 0) continue
+      const n = ge.event.players_involved
+      for (const k of resolvedKillerIndices(ge.event)) {
+        if (k < 0 || k >= n || k >= ge.players_involved.length) continue
+        const killer = ge.players_involved[k]!
+        rosterKillSubtrahend.set(killer, (rosterKillSubtrahend.get(killer) ?? 0) + add)
+      }
+    }
+
+    return { rosterAlive: alive, rosterKillSubtrahend }
+  }, [state.renderState, roundEventIndex])
+
   const hideControlPrimaryDuringRound =
     state.renderState?.state === RenderState.ROUND_EVENTS && !state.isAutoPlaying
 
@@ -187,6 +235,7 @@ function App() {
         seasonTitle={state.seasonTitle}
         renderState={state.renderState}
         totalTributes={state.game?.tributes.length ?? state.tributes.length}
+        displayAliveCount={state.screen === 'game' && state.renderState ? rosterAlive.length : undefined}
         onSettingsClick={() => setDrawerOpen(true)}
         onAbort={handleAbort}
         showGameControls={state.screen === 'game'}
@@ -203,6 +252,7 @@ function App() {
           onUpdateTribute={(id, updates) => dispatch({ type: 'UPDATE_TRIBUTE', id, updates })}
           onStartGame={() => dispatch({ type: 'START_GAME' })}
           onSetTributes={(tributes) => dispatch({ type: 'SET_TRIBUTES', tributes })}
+          onAppendTributes={(tributes) => dispatch({ type: 'APPEND_TRIBUTES', tributes })}
           onSetCustomEvents={(events) => dispatch({ type: 'SET_CUSTOM_EVENTS', events })}
           onError={(error) => dispatch({ type: 'SET_ERROR', error })}
         />
@@ -212,13 +262,15 @@ function App() {
         <div className="game-layout">
           <RosterSidebar
             allTributes={state.game.tributes}
-            alive={state.renderState.tributes_alive}
+            alive={rosterAlive}
+            killCountSubtrahend={rosterKillSubtrahend}
           />
           <BroadcastStage
             renderState={state.renderState}
             eventIndex={safeEventIndex}
             onEventIndexChange={setRoundEventIndex}
             onAdvanceGame={() => stepGameForward()}
+            onUpdateSceneNarrative={(payload) => dispatch({ type: 'UPDATE_SCENE_NARRATIVE', payload })}
           />
           <ControlRail
             onProceed={handleProceed}

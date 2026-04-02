@@ -1,6 +1,12 @@
 import { useReducer } from 'react'
 import { it } from '../i18n/it'
-import { Game, loadDefaultEvents, loadEventsFromStored, type KillLimitConfig } from '../engine/game'
+import {
+  Game,
+  loadDefaultEvents,
+  loadEventsFromStored,
+  tryPatchGameEventNarrative,
+  type KillLimitConfig,
+} from '../engine/game'
 import {
   PronounSetting,
   RenderState,
@@ -63,6 +69,7 @@ type GameAction =
   | { type: 'HYDRATE'; payload: HydratePayload }
   | { type: 'RESET_TO_DEFAULTS' }
   | { type: 'SET_TRIBUTES'; tributes: TributeCharacterSelectOptions[] }
+  | { type: 'APPEND_TRIBUTES'; tributes: TributeCharacterSelectOptions[] }
   | { type: 'ADD_TRIBUTE' }
   | { type: 'REMOVE_TRIBUTE'; id: string }
   | { type: 'UPDATE_TRIBUTE'; id: string; updates: Partial<TributeCharacterSelectOptions> }
@@ -77,6 +84,7 @@ type GameAction =
   | { type: 'SET_AUTO_PLAY'; playing: boolean; speed?: number }
   | { type: 'SET_CUSTOM_EVENTS'; events: EventList<StoredEvent> | null }
   | { type: 'SET_GAME_SETTINGS'; settings: Partial<GameSettings> }
+  | { type: 'UPDATE_SCENE_NARRATIVE'; payload: { roundIndex: number; sceneIndex: number; message: string } }
 
 export function createInitialGameStore(): GameStore {
   return {
@@ -155,6 +163,9 @@ function gameReducer(state: GameStore, action: GameAction): GameStore {
         }
       }
       return { ...state, tributes: action.tributes }
+
+    case 'APPEND_TRIBUTES':
+      return { ...state, tributes: [...state.tributes, ...action.tributes] }
 
     case 'ADD_TRIBUTE':
       return {
@@ -285,6 +296,18 @@ function gameReducer(state: GameStore, action: GameAction): GameStore {
 
     case 'SET_GAME_SETTINGS':
       return { ...state, gameSettings: { ...state.gameSettings, ...action.settings } }
+
+    case 'UPDATE_SCENE_NARRATIVE': {
+      const { game, renderState } = state
+      if (!game || !renderState) return state
+      const { roundIndex, sceneIndex, message } = action.payload
+      const round = renderState.rounds[roundIndex]
+      const ge = round?.game_events[sceneIndex]
+      if (!ge) return state
+      const err = tryPatchGameEventNarrative(ge, message)
+      if (err) return { ...state, error: err.message }
+      return { ...state, renderState: { ...renderState, rounds: [...renderState.rounds] } }
+    }
 
     default:
       return state

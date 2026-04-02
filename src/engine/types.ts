@@ -165,7 +165,7 @@ export function resolvedKillerIndices(event: Pick<Event, 'killers' | 'fatalities
   return killers
 }
 
-function calculateTributesInvolved(raw_message: string): number {
+export function calculateTributesInvolved(raw_message: string): number {
   const v_raw = raw_message
     .match(/%[NAGRsyih!w]?(\d)/g)
     ?.map((x) => +x.slice(-1))

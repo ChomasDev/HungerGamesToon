@@ -1,8 +1,17 @@
-import { useRef } from 'react'
-import type { EventList, StoredEvent, TributeCharacterSelectOptions } from '../engine/types'
+import { useRef, useState } from 'react'
+import {
+  PronounSetting,
+  type EventList,
+  type StoredEvent,
+  type TributeCharacterSelectOptions,
+} from '../engine/types'
 import { loadCharactersFromJson, loadEventsFromJson, saveCharactersToJson, saveEventsToJson, downloadJson, readJsonFile } from '../engine/serialization'
+import { cloneBuiltinEventsForEditor } from '../engine/eventListUtils'
 import { builtinEvents } from '../engine/events'
 import { it } from '../i18n/it'
+import { makeId } from '../store/gameStore'
+import { isImageFile, titleFromImageFilename } from '../utils/imageRoster'
+import EventPoolEditor from './EventPoolEditor'
 import TributeCard from './TributeCard'
 
 interface RosterBuilderProps {
@@ -15,6 +24,7 @@ interface RosterBuilderProps {
   onUpdateTribute: (id: string, updates: Partial<TributeCharacterSelectOptions>) => void
   onStartGame: () => void
   onSetTributes: (tributes: TributeCharacterSelectOptions[]) => void
+  onAppendTributes: (tributes: TributeCharacterSelectOptions[]) => void
   onSetCustomEvents: (events: EventList<StoredEvent> | null) => void
   onError: (msg: string) => void
 }
@@ -29,11 +39,14 @@ export default function RosterBuilder({
   onUpdateTribute,
   onStartGame,
   onSetTributes,
+  onAppendTributes,
   onSetCustomEvents,
   onError,
 }: RosterBuilderProps) {
   const charFileRef = useRef<HTMLInputElement>(null)
   const eventFileRef = useRef<HTMLInputElement>(null)
+  const imagesFileRef = useRef<HTMLInputElement>(null)
+  const [lobbyDragOver, setLobbyDragOver] = useState(false)
 
   async function handleLoadCharacters(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -76,15 +89,67 @@ export default function RosterBuilder({
     onSetCustomEvents(null)
   }
 
+  function buildTributesFromImageFiles(files: Iterable<File>): TributeCharacterSelectOptions[] {
+    const list = [...files].filter(isImageFile)
+    return list.map((file) => ({
+      id: makeId(),
+      name: titleFromImageFilename(file.name),
+      pronoun_option: PronounSetting.Common,
+      image_url: URL.createObjectURL(file),
+    }))
+  }
+
+  function appendImagesFromFiles(files: Iterable<File>) {
+    const next = buildTributesFromImageFiles(files)
+    if (next.length === 0) return
+    onAppendTributes(next)
+  }
+
+  function handleLoadImages(e: React.ChangeEvent<HTMLInputElement>) {
+    const fl = e.target.files
+    if (fl && fl.length > 0) appendImagesFromFiles(fl)
+    e.target.value = ''
+  }
+
+  function handleLobbyDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    if (e.dataTransfer.types.includes('Files')) {
+      e.dataTransfer.dropEffect = 'copy'
+    }
+  }
+
+  function handleLobbyDragEnter(e: React.DragEvent) {
+    if (e.dataTransfer.types.includes('Files')) setLobbyDragOver(true)
+  }
+
+  function handleLobbyDragLeave(e: React.DragEvent) {
+    const related = e.relatedTarget as Node | null
+    if (related && e.currentTarget.contains(related)) return
+    setLobbyDragOver(false)
+  }
+
+  function handleLobbyDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setLobbyDragOver(false)
+    if (e.dataTransfer.files?.length) appendImagesFromFiles(e.dataTransfer.files)
+  }
+
   const eventCount = customEvents
     ? Object.values(customEvents).reduce((sum, list) => sum + (list?.length ?? 0), 0)
     : null
 
   return (
-    <div className="lobby-screen">
+    <div
+      className={`lobby-screen${lobbyDragOver ? ' lobby-screen--drag-over' : ''}`}
+      onDragOver={handleLobbyDragOver}
+      onDragEnter={handleLobbyDragEnter}
+      onDragLeave={handleLobbyDragLeave}
+      onDrop={handleLobbyDrop}
+    >
       <div className="lobby-hero">
         <h1>{it.appTitle}</h1>
         <p className="subtitle">{it.appSubtitle}</p>
+        <p className="lobby-drop-hint">{it.lobbyDropImagesHint}</p>
         <input
           className="season-title-input"
           type="text"
@@ -107,6 +172,9 @@ export default function RosterBuilder({
             <button className="btn btn-ghost" onClick={() => charFileRef.current?.click()}>
               {it.loadJson}
             </button>
+            <button className="btn btn-ghost" onClick={() => imagesFileRef.current?.click()}>
+              {it.uploadImages}
+            </button>
             <button className="btn btn-ghost" onClick={handleSaveCharacters}>
               {it.saveJson}
             </button>
@@ -116,6 +184,14 @@ export default function RosterBuilder({
               accept=".json"
               style={{ display: 'none' }}
               onChange={handleLoadCharacters}
+            />
+            <input
+              ref={imagesFileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: 'none' }}
+              onChange={handleLoadImages}
             />
           </div>
         </div>
@@ -171,6 +247,17 @@ export default function RosterBuilder({
             />
           </div>
         </div>
+
+        {customEvents === null ? (
+          <div className="event-pool-builtin-banner">
+            <p className="event-pool-builtin-text">{it.eventPoolBuiltinHint}</p>
+            <button type="button" className="btn btn-secondary" onClick={() => onSetCustomEvents(cloneBuiltinEventsForEditor())}>
+              {it.eventPoolCustomize}
+            </button>
+          </div>
+        ) : (
+          <EventPoolEditor events={customEvents} onChange={onSetCustomEvents} />
+        )}
       </section>
 
       <div className="lobby-footer">

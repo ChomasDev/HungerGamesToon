@@ -5,6 +5,8 @@ interface TopBarProps {
   seasonTitle: string
   renderState: GameRenderStateData | null
   totalTributes: number
+  /** When set (e.g. spoiler-safe roster during phase playback), overrides `tributes_alive.length` for stats. */
+  displayAliveCount?: number
   onSettingsClick: () => void
   onAbort: () => void
   showGameControls: boolean
@@ -14,11 +16,12 @@ export default function TopBar({
   seasonTitle,
   renderState,
   totalTributes,
+  displayAliveCount,
   onSettingsClick,
   onAbort,
   showGameControls,
 }: TopBarProps) {
-  const alive = renderState?.tributes_alive.length ?? 0
+  const alive = displayAliveCount ?? renderState?.tributes_alive.length ?? 0
   const dead = totalTributes - alive
 
   return (

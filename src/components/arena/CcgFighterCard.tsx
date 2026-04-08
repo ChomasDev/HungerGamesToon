@@ -10,6 +10,7 @@ export interface CcgFighterCardProps {
   tribute: Tribute
   variant: 'killer' | 'victim'
   portraitSize: number
+  cardWidth?: string
   /** Slide-in direction for versus reveal */
   motionSide: 'left' | 'right'
   animKey: string
@@ -19,6 +20,7 @@ export default function CcgFighterCard({
   tribute,
   variant,
   portraitSize,
+  cardWidth,
   motionSide,
   animKey,
 }: CcgFighterCardProps) {
@@ -30,11 +32,12 @@ export default function CcgFighterCard({
   return (
     <motion.article
       key={animKey}
-      className={`relative flex w-full max-w-[min(88vw,328px)] shrink-0 flex-col overflow-visible rounded-[18px] border-[5px] border-comic-ink pb-1.5 ring-2 ring-black/25 ring-offset-0 ${
+      className={`relative flex max-w-full shrink-0 flex-col overflow-hidden rounded-[18px] border-[5px] border-comic-ink pb-1.5 ring-2 ring-black/25 ring-offset-0 ${
           isVictim
             ? 'bg-linear-to-br from-[#f0f7ff] from-0% via-[#d4e8ff] via-35% to-[#a8d4ff] to-100% [box-shadow:9px_9px_0_rgba(10,10,15,0.4),inset_0_2px_0_rgba(255,255,255,0.65),inset_0_-5px_0_rgba(30,90,180,0.14)]'
             : 'bg-linear-to-br from-[#fff8ed] from-0% via-[#ffecd4] via-40% to-[#ffd6a8] to-100% [box-shadow:9px_9px_0_rgba(10,10,15,0.4),inset_0_2px_0_rgba(255,255,255,0.85),inset_0_-5px_0_rgba(255,140,60,0.16)]'
         } `}
+      style={{ width: cardWidth ?? 'min(88vw, 328px)' }}
       initial={
         reduceMotion
           ? { opacity: 0 }
@@ -96,12 +99,12 @@ export default function CcgFighterCard({
       </div>
 
       <div
-        className={`relative mx-2 mb-1 mt-1.5 h-[min(26vh,188px)] min-h-[120px] w-full overflow-hidden rounded-[14px] border-[3px] border-comic-ink bg-[#0a1628] [box-shadow:inset_0_0_0_2px_rgba(126,200,255,0.85),0_2px_0_rgba(255,255,255,0.12)] max-[720px]:h-[min(24vh,168px)]`}
+        className={`relative mb-1 mt-1.5 ml-2 mr-2 h-[min(26vh,188px)] min-h-[120px] w-auto overflow-hidden rounded-[14px] border-[3px] border-comic-ink bg-[#0a1628] [box-shadow:inset_0_0_0_2px_rgba(126,200,255,0.85),0_2px_0_rgba(255,255,255,0.12)] max-[720px]:h-[min(24vh,168px)]`}
       >
         <CcgCardArtRays variant={variant} />
         {isVictim && !reduceMotion && (
           <motion.div
-            className="pointer-events-none absolute inset-0 z-[1] rounded-lg [background:radial-gradient(circle_at_50%_38%,rgba(255,240,200,0.55)_0%,rgba(120,0,24,0.35)_40%,transparent_68%)]"
+            className="pointer-events-none absolute inset-0 z-1 rounded-lg [background:radial-gradient(circle_at_50%_38%,rgba(255,240,200,0.55)_0%,rgba(120,0,24,0.35)_40%,transparent_68%)]"
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, 0, 0, 0.95, 0.2, 0.38] }}
             transition={{
@@ -112,7 +115,7 @@ export default function CcgFighterCard({
           />
         )}
         <motion.div
-          className="absolute inset-0 z-[2] h-full w-full"
+          className="absolute inset-0 z-2 h-full w-full"
           animate={
             reduceMotion || !isVictim
               ? undefined

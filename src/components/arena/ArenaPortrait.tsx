@@ -57,7 +57,7 @@ function ArenaPortraitInner({
           <img
             src={loadSrc}
             alt={name}
-            className="relative z-[1] block h-full w-full object-cover object-center"
+            className="relative z-1 block h-full w-full object-contain object-center"
             onError={() => setImgFailed(true)}
             decoding="async"
             referrerPolicy="no-referrer"
@@ -68,7 +68,7 @@ function ArenaPortraitInner({
         {showStrike &&
           (fightEliminationOverlay && !reduceMotion ? (
             <motion.div
-              className="absolute inset-0 z-[2] flex items-center justify-center bg-[rgba(230,57,70,0.36)]"
+              className="absolute inset-0 z-2 flex items-center justify-center bg-[rgba(230,57,70,0.36)]"
               initial={{ opacity: 0 }}
               animate={{ opacity: [0, 0, 0, 1, 1, 1] }}
               transition={{ duration: 1.15, times: [0, 0.32, 0.38, 0.44, 1, 1] }}
@@ -92,7 +92,7 @@ function ArenaPortraitInner({
             </motion.div>
           ) : (
             <div
-              className="absolute inset-0 z-[2] flex items-center justify-center bg-[rgba(230,57,70,0.35)] text-[clamp(2.5rem,18vmin,6rem)] font-black leading-none text-dead [text-shadow:3px_3px_0_var(--comic-ink)]"
+              className="absolute inset-0 z-2 flex items-center justify-center bg-[rgba(230,57,70,0.35)] text-[clamp(2.5rem,18vmin,6rem)] font-black leading-none text-dead [text-shadow:3px_3px_0_var(--comic-ink)]"
               style={{ animation: 'scaleIn 0.3s ease both' }}
             >
               &#10005;

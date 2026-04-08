@@ -97,7 +97,7 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
               animKey={`${index}-${attackers[0].raw_name}-${victims[0].raw_name}`}
             />
             {bystanders.length > 0 && (
-              <div className="arena-bystanders ccg-bystanders relative z-[2] mx-auto w-full max-w-[min(92vw,520px)] justify-center px-2 pt-1">
+              <div className="arena-bystanders ccg-bystanders relative z-2 mx-auto w-full max-w-[min(92vw,520px)] justify-center px-2 pt-1">
                 {bystanders.map((t, i) => (
                   <div key={i} className="arena-bystander-chip">
                     <ArenaPortrait src={t.image_src} name={t.raw_name} isDead={false} size={portraitSizeXs} square={sq} />
@@ -112,6 +112,8 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
 
       const ccgFighterCount = attackers.length + victims.length
       const ccgPortraitSize = Math.max(96, Math.min(320, Math.round(960 / Math.max(ccgFighterCount, 2))))
+      const ccgGapBudget = 96 + Math.max(0, ccgFighterCount - 1) * 18
+      const ccgCardWidth = `clamp(148px, calc((100% - ${ccgGapBudget}px) / ${Math.max(ccgFighterCount, 1)}), 328px)`
 
       const renderCcgCard = (t: Tribute, role: 'killer' | 'victim', idx: number) => (
         <CcgFighterCard
@@ -119,6 +121,7 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
           tribute={t}
           variant={role}
           portraitSize={ccgPortraitSize}
+          cardWidth={ccgCardWidth}
           motionSide={role === 'killer' ? 'left' : 'right'}
           animKey={`${index}-${role}-${idx}-${t.raw_name}`}
         />
@@ -126,20 +129,20 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
 
       return (
         <>
-          <div className="ccg-battle-frame relative z-[1] w-full overflow-x-clip">
+          <div className="ccg-battle-frame relative z-1 w-full overflow-hidden">
             <CcgBattleDecorations />
-            <div className="arena-battle-stage ccg-battle-stage relative z-[1] gap-1.5 px-1.5 pb-1 pt-1">
-              <div className="arena-battle-row ccg-battle-row flex min-w-0 flex-nowrap items-stretch justify-center gap-[clamp(4px,1.5vmin,14px)] max-[720px]:flex-nowrap max-[720px]:justify-center max-[720px]:overflow-x-auto max-[720px]:overflow-y-visible max-[720px]:pb-1 max-[720px]:[-webkit-overflow-scrolling:touch]">
-                <div className="arena-side arena-side-attacker ccg-side flex min-w-0 shrink-0 flex-nowrap justify-end gap-[clamp(4px,1.2vmin,14px)] max-[720px]:justify-center">
+            <div className="arena-battle-stage ccg-battle-stage relative z-1 gap-1.5 px-1.5 pb-1 pt-1">
+              <div className="arena-battle-row ccg-battle-row flex min-w-0 flex-nowrap items-stretch justify-center gap-[clamp(4px,1.5vmin,14px)] max-[720px]:flex-nowrap max-[720px]:justify-center max-[720px]:overflow-x-auto max-[720px]:overflow-y-hidden max-[720px]:pb-1 max-[720px]:[-webkit-overflow-scrolling:touch]">
+                <div className="arena-side arena-side-attacker ccg-side flex min-w-0 flex-nowrap justify-end gap-[clamp(4px,1.2vmin,14px)] max-[720px]:justify-center">
                   {attackers.map((t, i) => renderCcgCard(t, 'killer', i))}
                 </div>
                 <VersusBadge />
-                <div className="arena-side arena-side-victim ccg-side flex min-w-0 shrink-0 flex-nowrap justify-start gap-[clamp(4px,1.2vmin,14px)] max-[720px]:justify-center">
+                <div className="arena-side arena-side-victim ccg-side flex min-w-0 flex-nowrap justify-start gap-[clamp(4px,1.2vmin,14px)] max-[720px]:justify-center">
                   {victims.map((t, i) => renderCcgCard(t, 'victim', i))}
                 </div>
               </div>
               {bystanders.length > 0 && (
-                <div className="arena-bystanders ccg-bystanders relative z-[2] pt-1">
+                <div className="arena-bystanders ccg-bystanders relative z-2 pt-1">
                   {bystanders.map((t, i) => (
                     <div key={i} className="arena-bystander-chip">
                       <ArenaPortrait src={t.image_src} name={t.raw_name} isDead={false} size={portraitSizeXs} square={sq} />

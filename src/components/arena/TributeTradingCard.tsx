@@ -163,9 +163,9 @@ export interface TributeTradingCardDeckProps {
 export function TributeTradingCardDeck({ tributes, isDeadAtIndex, message }: TributeTradingCardDeckProps) {
   const reduceMotion = useReducedMotion()
   const n = tributes.length
-  const maxRot = n <= 1 ? 0 : Math.min(15, 5 + (n - 1) * 2.4)
+  const maxRot = n <= 1 ? 0 : Math.min(11, 4 + (n - 1) * 50)
   /** Horizontal distance between card pivots (~half appears as each card’s offset from center). */
-  const spreadX = n <= 1 ? 0 : Math.min(160, 72 + (n - 1) * 34)
+  const spreadX = n <= 1 ? 0 : Math.min(240, 112 + (n - 1) * 200)
 
   const deckMinH =
     n === 2
@@ -176,14 +176,14 @@ export function TributeTradingCardDeck({ tributes, isDeadAtIndex, message }: Tri
 
   return (
     <div className="tribute-trading-card-deck flex w-full flex-col items-center">
-      <div className={`relative mx-auto w-full max-w-[min(100%,76rem)] ${deckMinH}`}>
+      <div className={`relative mx-auto w-full max-w-[min(100%,84rem)] px-4 ${deckMinH}`}>
         {tributes.map((tribute, i) => {
           const angle = n === 1 ? 0 : -maxRot + (maxRot * 2 * i) / (n - 1)
           const xOffset = n === 1 ? 0 : (i - (n - 1) / 2) * spreadX
           return (
             <motion.div
               key={`${tribute.raw_name}-${i}`}
-              className="absolute bottom-0 left-1/2 w-[min(82vw,328px)] max-w-[328px] -translate-x-1/2"
+              className="absolute bottom-0 left-1/2 w-[min(78vw,328px)] max-w-[328px] -translate-x-1/2"
               style={{
                 transformOrigin: '50% 100%',
                 zIndex: i + 1,
@@ -273,7 +273,7 @@ export function TributeTradingVersusFight({ killer, victim, message, animKey }: 
 
         <motion.div
           key={`${animKey}-victim`}
-          className="relative z-[2] w-[min(42vw,300px)] max-w-[300px] shrink-0"
+          className="relative z-2 w-[min(42vw,300px)] max-w-[300px] shrink-0"
           style={{ transformOrigin: '50% 65%' }}
           initial={reduceMotion ? { opacity: 0 } : { x: 120, y: 28, opacity: 0, rotateZ: 8, scale: 0.88 }}
           animate={

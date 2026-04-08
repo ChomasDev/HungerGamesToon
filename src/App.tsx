@@ -229,6 +229,7 @@ function App() {
       className="app-shell"
       data-theme={themeAttr}
       data-motion={motionAttr}
+      data-screen={state.screen}
       style={{ '--accent': state.theme.accent, '--accent-glow': `${state.theme.accent}4d` } as React.CSSProperties}
     >
       <TopBar

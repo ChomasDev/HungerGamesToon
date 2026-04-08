@@ -1,7 +1,6 @@
 import {
   Event,
   GameStage,
-  NameSpan,
   RenderState,
   Tribute,
   titleCase,
@@ -81,6 +80,20 @@ function shuffle<T>(array: T[]): T[] {
     array[j] = k
   }
   return array
+}
+
+function buildFallbackPhaseEvent(stage: GameStage): Event {
+  switch (stage) {
+    case GameStage.BLOODBATH:
+      return new Event('%0 keeps away from the bloodbath and survives the opening chaos.', [], [], 'FILLER')
+    case GameStage.DAY:
+      return new Event('%0 spends the day searching the arena for supplies.', [], [], 'FILLER')
+    case GameStage.NIGHT:
+      return new Event('%0 stays alert and makes it through the night.', [], [], 'FILLER')
+    case GameStage.FEAST:
+      return new Event('%0 circles the feast from a safe distance and waits for an opening.', [], [], 'FILLER')
+  }
+  throw new Error(`Invalid fallback stage: ${String(stage)}`)
 }
 
 export function composeGameEventMessage(event: GameEventData): FormattedMessage {
@@ -432,7 +445,7 @@ export class Game {
     }
   }
 
-  /** Deaths allowed this phase: exact/range target, or random-mode cap; -1 = unlimited */
+  /** Lethal events allowed this phase: exact/range target, or random-mode cap; -1 = unlimited */
   private getDeathCapForRound(): number {
     const kt = this.computeKillTarget()
     if (kt >= 0) return kt
@@ -442,19 +455,29 @@ export class Game {
 
   private requirementsSatisfied(
     event: Event,
-    currentTribute: number,
     tributesLeft: number,
-    diedThisRound: number,
+    lethalEventsThisRound: number,
     deathCap: number,
   ): boolean {
     if (event.players_involved > tributesLeft) return false
     if (deathCap >= 0 && event.fatalities.length > 0) {
-      const add = event.fatalities.length
-      if (diedThisRound >= deathCap) return false
-      if (diedThisRound + add > deathCap) return false
+      if (lethalEventsThisRound >= deathCap) return false
     }
     if (event.fatalities.length && Math.random() < this.fatality_reroll_rate) return false
     return true
+  }
+
+  private pickEventForWindow(
+    eventList: Event[],
+    tributesLeft: number,
+    lethalEventsThisRound: number,
+    deathCap: number,
+  ): Event | null {
+    const eligible = eventList.filter((event) =>
+      this.requirementsSatisfied(event, tributesLeft, lethalEventsThisRound, deathCap),
+    )
+    if (!eligible.length) return null
+    return eligible[random(0, eligible.length)]
   }
 
   private doRoundImpl() {
@@ -484,11 +507,9 @@ export class Game {
       default: throw Error(`Invalid game stage`)
     }
 
-    if (!eventList.length) {
-      simDebug('phase skipped — no events for stage', this.stage, 'round#', round.index)
-      return
-    }
-    let diedThisRound = 0
+    if (!eventList.length) simDebug('phase using fallback scenes — no events for stage', this.stage, 'round#', round.index)
+    let fatalitiesThisRound = 0
+    let lethalEventsThisRound = 0
     const deathCap = this.getDeathCapForRound()
     const targetEventCount = random(this.eventsPerPhaseMin, this.eventsPerPhaseMax + 1)
     simDebug(`phase ${this.stage} round#${round.index}`, 'shuffle:', this.tributes_alive.map((t) => t.raw_name), {
@@ -496,14 +517,11 @@ export class Game {
       targetEventCount,
     })
 
-    outer: while (tributesLeft) {
+    while (tributesLeft) {
       const tributes_involved: Tribute[] = []
-      let event: Event
-      let tries = 0
-      do {
-        if (tries++ > Math.max(100, eventList.length * 10)) break outer
-        event = eventList[random(0, eventList.length)]
-      } while (!this.requirementsSatisfied(event, currentTribute, tributesLeft, diedThisRound, deathCap))
+      const event =
+        this.pickEventForWindow(eventList, tributesLeft, lethalEventsThisRound, deathCap)
+        ?? buildFallbackPhaseEvent(this.stage)
       tributesLeft -= event.players_involved
 
       const windowNames: string[] = []
@@ -512,6 +530,7 @@ export class Game {
         windowNames.push(t ? t.raw_name : `<?@${currentTribute + i}>`)
       }
 
+      let eventHadFatality = false
       for (const f of event.fatalities) {
         const abs = currentTribute + f
         if (f < 0 || f >= event.players_involved) {
@@ -535,8 +554,10 @@ export class Game {
         victim.died_in_round = round
         round.died_this_round.push(victim)
         tributesAlive--
-        diedThisRound++
+        fatalitiesThisRound++
+        eventHadFatality = true
       }
+      if (eventHadFatality) lethalEventsThisRound++
 
       for (const k of resolvedKillerIndices(event)) {
         if (k < 0 || k >= event.players_involved) {
@@ -565,15 +586,13 @@ export class Game {
         'text:',
         gameEvent.message.map((p) => (typeof p === 'string' ? p : p.value)).join(''),
       )
-
-      if (round.game_events.length >= targetEventCount) break outer
-
       if (tributesAlive < 2) break
-      if (deathCap >= 0 && diedThisRound >= deathCap) break
     }
 
     simDebug('phase end', round.stage, 'eliminated:', round.died_this_round.map((t) => t.raw_name), {
       scenes: round.game_events.length,
+      fatalitiesThisRound,
+      lethalEventsThisRound,
     })
     this.tributes_alive = this.tributes_alive.filter((t) => t.died_in_round === undefined)
     this.tributes_died.push(...round.died_this_round)

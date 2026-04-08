@@ -37,9 +37,9 @@ export interface GameSettings {
   killsPerRoundValue: number
   killsPerRoundMin: number
   killsPerRoundMax: number
-  /** Fully Random only: max deaths per phase; 0 = unlimited */
+  /** Fully Random only: max lethal events per phase; 0 = unlimited */
   randomRoundDeathCap: number
-  /** Random inclusive bounds for how many event scenes play per phase (day/night/etc.). */
+  /** Random inclusive bounds for base scene count per phase; more scenes may be added so everyone appears. */
   eventsPerPhaseMin: number
   eventsPerPhaseMax: number
 }

@@ -196,20 +196,22 @@ export default function RosterBuilder({
           </div>
         </div>
 
-        <div className="roster-grid">
-          {tributes.map((tribute, i) => (
-            <TributeCard
-              key={tribute.id}
-              tribute={tribute}
-              index={i}
-              onUpdate={onUpdateTribute}
-              onRemove={onRemoveTribute}
-            />
-          ))}
-          <button className="add-tribute-card" onClick={onAddTribute}>
-            <span className="plus">+</span>
-            <span className="label">{it.addTributeCard}</span>
-          </button>
+        <div className="roster-grid-scroll">
+          <div className="roster-grid">
+            {tributes.map((tribute, i) => (
+              <TributeCard
+                key={tribute.id}
+                tribute={tribute}
+                index={i}
+                onUpdate={onUpdateTribute}
+                onRemove={onRemoveTribute}
+              />
+            ))}
+            <button className="add-tribute-card" onClick={onAddTribute}>
+              <span className="plus">+</span>
+              <span className="label">{it.addTributeCard}</span>
+            </button>
+          </div>
         </div>
 
         <div className="roster-toolbar" style={{ marginTop: 16 }}>

@@ -28,6 +28,12 @@
     auto;
 }
 
+.app-shell[data-screen='game'] {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
 /* ============================
    Top Bar / HUD
    ============================ */
@@ -393,7 +399,7 @@
    Roster Builder
    ============================ */
 .roster-section {
-  padding: 0 24px 60px;
+  padding: 0 24px 112px;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
@@ -430,7 +436,19 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
+}
+
+.roster-grid-scroll {
+  max-height: min(52vh, 720px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 6px 8px 4px;
   margin-bottom: 24px;
+  border: 2px solid rgba(10, 10, 15, 0.18);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-card) 72%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  scrollbar-gutter: stable;
 }
 
 /* Tribute Card (Roster) */
@@ -467,7 +485,8 @@
 .tribute-card-portrait img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
 .tribute-card-portrait .placeholder {
@@ -605,10 +624,16 @@
 }
 
 .lobby-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
   text-align: center;
-  padding: 40px 24px;
+  padding: 16px 24px calc(16px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--border);
-  background: var(--bg-secondary);
+  background:
+    linear-gradient(180deg, rgba(61, 47, 98, 0) 0%, rgba(61, 47, 98, 0.9) 24%, var(--bg-secondary) 100%);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 -10px 24px rgba(10, 10, 15, 0.18);
 }
 
 /* ============================
@@ -619,7 +644,8 @@
   display: grid;
   grid-template-columns: 260px 1fr;
   grid-template-rows: 1fr auto;
-  min-height: calc(100vh - 52px);
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 900px) {
@@ -680,7 +706,8 @@
 .sidebar-avatar img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 .sidebar-tribute.dead .sidebar-avatar {
   border-color: var(--dead);
@@ -1189,7 +1216,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
 }
 .arena-portrait-initials {
@@ -1825,7 +1852,8 @@
 .death-tribute-avatar img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
 .death-tribute-name {
@@ -1885,7 +1913,8 @@
 .winner-avatar img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
 .winner-name {
@@ -1959,7 +1988,8 @@
 .stat-card-avatar img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 .stat-card.is-winner .stat-card-avatar {
   border: 2px solid var(--accent-gold);
@@ -2103,7 +2133,8 @@
 .results-winner-avatar img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
 .results-winner-name {
@@ -2699,6 +2730,9 @@
   }
   .roster-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+  .roster-grid-scroll {
+    max-height: min(46vh, 560px);
   }
   .center-stage {
     padding: 16px;

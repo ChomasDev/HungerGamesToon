@@ -83,7 +83,7 @@ export function TributeTradingCardFace({
   return (
     <div
       className={`tribute-trading-card-face w-full ${
-        deck ? 'max-w-full' : 'mx-auto max-w-[min(88vw,280px)]'
+        deck ? 'max-w-full' : 'mx-auto max-w-[min(90vw,340px)]'
       } ${className}`.trim()}
     >
       <div
@@ -229,9 +229,9 @@ export function TributeTradingCardDeck({ tributes, isDeadAtIndex, message }: Tri
   const maxRot = n <= 1 ? 0 : Math.min(10, 3 + (n - 1) * 2.2)
 
   /** Card width scales with viewport but clamps for big screens and readability. */
-  const MAX_DECK_CARD_PX = 208
-  const MIN_DECK_CARD_PX = 96
-  const vwFrac = n >= 4 ? 0.13 : n === 3 ? 0.155 : n === 2 ? 0.17 : 0.2
+  const MAX_DECK_CARD_PX = 248
+  const MIN_DECK_CARD_PX = 120
+  const vwFrac = n >= 4 ? 0.15 : n === 3 ? 0.18 : n === 2 ? 0.2 : 0.24
   const deckCardWidth = Math.round(
     Math.min(MAX_DECK_CARD_PX, Math.max(MIN_DECK_CARD_PX, vw * vwFrac)),
   )
@@ -239,17 +239,17 @@ export function TributeTradingCardDeck({ tributes, isDeadAtIndex, message }: Tri
   /** Horizontal distance between card pivots; scaled so the fan stays visible on narrow viewports. */
   const layoutScale = Math.min(1, Math.max(0.4, (vw - 40) / 640))
   const spreadBase =
-    n <= 1 ? 0 : Math.min(deckCardWidth * 1.1, deckCardWidth * 0.55 + (n - 1) * 42)
+    n <= 1 ? 0 : Math.min(deckCardWidth * 1.15, deckCardWidth * 0.6 + (n - 1) * 48)
   const spreadX = spreadBase * layoutScale
 
   /** With aspect-[5/4] art + header + padding the card is ≈ 1.35× as tall as wide. */
   const approxCardHeight = Math.round(deckCardWidth * 1.35 + 40)
-  const deckMinHeight = Math.min(360, Math.max(170, approxCardHeight + 12))
+  const deckMinHeight = Math.min(420, Math.max(200, approxCardHeight + 12))
 
   return (
     <div className="tribute-trading-card-deck flex w-full flex-col items-center">
       <div
-        className="relative z-[1] mx-auto w-full max-w-[min(100%,40rem)] px-2 sm:px-4"
+        className="relative z-[1] mx-auto w-full max-w-[min(100%,44rem)] px-2 sm:px-4"
         style={{ minHeight: deckMinHeight, ...inverseZoom }}
       >
         {tributes.map((tribute, i) => {
@@ -312,7 +312,7 @@ export function TributeTradingVersusFight({ killer, victim, message, animKey }: 
       >
         <motion.div
           key={`${animKey}-killer`}
-          className="w-[min(40vw,220px)] shrink-0"
+          className="w-[min(44vw,260px)] shrink-0"
           style={{ transformOrigin: '50% 65%' }}
           initial={reduceMotion ? { opacity: 0 } : { x: -120, y: 28, opacity: 0, rotateZ: -8, scale: 0.86 }}
           animate={
@@ -355,7 +355,7 @@ export function TributeTradingVersusFight({ killer, victim, message, animKey }: 
 
         <motion.div
           key={`${animKey}-victim`}
-          className="relative z-2 w-[min(40vw,220px)] shrink-0"
+          className="relative z-2 w-[min(44vw,260px)] shrink-0"
           style={{ transformOrigin: '50% 65%' }}
           initial={reduceMotion ? { opacity: 0 } : { x: 120, y: 28, opacity: 0, rotateZ: 8, scale: 0.88 }}
           animate={

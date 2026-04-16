@@ -105,13 +105,13 @@ export default function BroadcastStage({
 
     return (
       <div className="center-stage fullscreen-stage stage-cards-only">
-        {currentEvent && onUpdateSceneNarrative && (
+        {/* {currentEvent && onUpdateSceneNarrative && (
           <div className="scene-edit-toolbar hidden" aria-hidden>
             <button type="button" className="btn btn-secondary scene-edit-open-btn" onClick={() => setEditModalOpen(true)}>
               {it.editSceneAction}
             </button>
           </div>
-        )}
+        )} */}
 
         {onUpdateSceneNarrative && (
           <EditSceneActionModal

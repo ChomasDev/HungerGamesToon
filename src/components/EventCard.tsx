@@ -112,10 +112,10 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
       }
 
       const ccgFighterCount = attackers.length + victims.length
-      const ccgPortraitSize = Math.max(96, Math.min(320, Math.round(960 / Math.max(ccgFighterCount, 2))))
+      const ccgPortraitSize = Math.max(112, Math.min(360, Math.round(1100 / Math.max(ccgFighterCount, 2))))
       /** VS badge (~72px) + inter-card gaps — kept snug so cards don't get crushed on narrow stages. */
       const ccgGapBudget = 72 + Math.max(0, ccgFighterCount - 1) * 12
-      const ccgCardWidth = `clamp(128px, calc((100% - ${ccgGapBudget}px) / ${Math.max(ccgFighterCount, 1)}), 220px)`
+      const ccgCardWidth = `clamp(148px, calc((100% - ${ccgGapBudget}px) / ${Math.max(ccgFighterCount, 1)}), 260px)`
 
       const renderCcgCard = (t: Tribute, role: 'killer' | 'victim', idx: number) => (
         <CcgFighterCard

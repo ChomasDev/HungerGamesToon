@@ -1,12 +1,14 @@
-import { motion, useReducedMotion } from 'framer-motion'
 import { resolvedKillerIndices, type GameEventData, type Tribute } from '../engine/types'
 import { it } from '../i18n/it'
 import ArenaPortrait from './arena/ArenaPortrait'
 import CcgBattleDecorations from './arena/CcgBattleDecorations'
 import CcgFighterCard from './arena/CcgFighterCard'
-import EventNarrative from './arena/EventNarrative'
 import FormattedEventMessage from './arena/FormattedEventMessage'
-import TributeTradingCard, { TributeTradingCardDeck, TributeTradingVersusFight } from './arena/TributeTradingCard'
+import TributeTradingCard, {
+  TributeTradingCardDeck,
+  TributeTradingVersusFight,
+  TradingCardSharedNarrative,
+} from './arena/TributeTradingCard'
 import VersusBadge from './arena/VersusBadge'
 
 interface EventCardProps {
@@ -16,7 +18,6 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, index, fullscreen }: EventCardProps) {
-  const reduceMotion = useReducedMotion()
   const hasDeath = event.event.fatalities.length > 0
   const deadIndices = new Set(event.event.fatalities)
   const killerIndices = new Set(resolvedKillerIndices(event.event))
@@ -112,8 +113,9 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
 
       const ccgFighterCount = attackers.length + victims.length
       const ccgPortraitSize = Math.max(96, Math.min(320, Math.round(960 / Math.max(ccgFighterCount, 2))))
-      const ccgGapBudget = 96 + Math.max(0, ccgFighterCount - 1) * 18
-      const ccgCardWidth = `clamp(120px, calc((100% - ${ccgGapBudget}px) / ${Math.max(ccgFighterCount, 1)}), 220px)`
+      /** VS badge (~72px) + inter-card gaps — kept snug so cards don't get crushed on narrow stages. */
+      const ccgGapBudget = 72 + Math.max(0, ccgFighterCount - 1) * 12
+      const ccgCardWidth = `clamp(128px, calc((100% - ${ccgGapBudget}px) / ${Math.max(ccgFighterCount, 1)}), 220px)`
 
       const renderCcgCard = (t: Tribute, role: 'killer' | 'victim', idx: number) => (
         <CcgFighterCard
@@ -153,21 +155,7 @@ export default function EventCard({ event, index, fullscreen }: EventCardProps) 
               )}
             </div>
           </div>
-          {reduceMotion ? (
-            <EventNarrative message={event.message} large={fullscreen} />
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 22, rotateZ: -0.5 }}
-              animate={{ opacity: 1, y: 0, rotateZ: 0 }}
-              transition={{
-                delay: 0.78,
-                duration: 0.48,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-            >
-              <EventNarrative message={event.message} large={fullscreen} />
-            </motion.div>
-          )}
+          <TradingCardSharedNarrative message={event.message} />
         </>
       )
     })()

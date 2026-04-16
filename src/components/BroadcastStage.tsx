@@ -104,16 +104,7 @@ export default function BroadcastStage({
     const roundIndex = rounds.length - 1
 
     return (
-      <div className="center-stage fullscreen-stage">
-        <div className="round-banner round-banner-compact round-banner-ccg">
-          <div className="round-banner-title-wrapper">
-            <h2>{title}</h2>
-          </div>
-          <div className="round-counter">
-            {hasNoEvents ? '—' : `${eventIndex + 1} / ${totalEvents}`}
-          </div>
-        </div>
-
+      <div className="center-stage fullscreen-stage stage-cards-only">
         {currentEvent && onUpdateSceneNarrative && (
           <div className="scene-edit-toolbar hidden" aria-hidden>
             <button type="button" className="btn btn-secondary scene-edit-open-btn" onClick={() => setEditModalOpen(true)}>
@@ -143,60 +134,15 @@ export default function BroadcastStage({
             </div>
           )}
         </div>
-
-        <div
-          className={`event-nav${isLastEvent || hasNoEvents ? ' event-nav-phase-ready' : ''}`}
-        >
-          <button
-            type="button"
-            className="btn btn-secondary event-nav-btn"
-            onClick={goPrevEvent}
-            disabled={eventIndex === 0 || hasNoEvents}
-          >
-            {it.prevScene}
-          </button>
-          <div className="event-nav-dots">
-            {!hasNoEvents &&
-              Array.from({ length: totalEvents }, (_, i) => (
-                <button
-                  type="button"
-                  key={i}
-                  className={`event-dot ${i === eventIndex ? 'active' : ''} ${
-                    currentRound!.game_events[i].event.fatalities.length > 0 ? 'dot-death' : ''
-                  }`}
-                  onClick={() => onEventIndexChange(i)}
-                />
-              ))}
-          </div>
-          {isLastEvent || hasNoEvents ? (
-            <div className="event-nav-end-actions">
-              <button
-                type="button"
-                className="btn btn-primary event-nav-btn event-nav-btn-phase"
-                onClick={() => onAdvanceGame?.()}
-                disabled={!onAdvanceGame}
-              >
-                {it.nextPhase}
-              </button>
-            </div>
-          ) : (
-            <button type="button" className="btn btn-secondary event-nav-btn" onClick={goNextEvent}>
-              {it.nextScene}
-            </button>
-          )}
-        </div>
-
-        <p className="event-nav-hint">
-          {isLastEvent || hasNoEvents ? it.eventNavHintEnd : it.eventNavHintScenes}
-        </p>
       </div>
     )
   }
 
   if (state === RenderState.ROUND_DEATHS) {
     return (
-      <div className="center-stage fullscreen-stage">
-        <div className="death-summary">
+      <div className="center-stage fullscreen-stage stage-panelled">
+        <div className="death-summary hud-panel hud-panel--deaths">
+          <span className="hud-panel__label">{it.hudPanelCaduti}</span>
           <h3>{title}</h3>
           {tributes_died.length > 0 ? (
             <>
@@ -231,8 +177,9 @@ export default function BroadcastStage({
 
   if (state === RenderState.WINNERS) {
     return (
-      <div className="center-stage fullscreen-stage">
-        <div className="winner-screen">
+      <div className="center-stage fullscreen-stage stage-panelled">
+        <div className="winner-screen hud-panel hud-panel--winners">
+          <span className="hud-panel__label">{it.hudPanelVincitori}</span>
           <h2>
             {tributes_alive.length > 0 ? it.gamesEnded : it.noVictorsRemain}
           </h2>
@@ -261,8 +208,9 @@ export default function BroadcastStage({
 
   if (state === RenderState.GAME_DEATHS) {
     return (
-      <div className="center-stage fullscreen-stage">
-        <div className="round-banner">
+      <div className="center-stage fullscreen-stage stage-panelled">
+        <div className="round-banner hud-panel hud-panel--round">
+          <span className="hud-panel__label">{it.hudPanelCaduti}</span>
           <h2>{title}</h2>
           <div className="round-divider" />
         </div>
@@ -290,8 +238,9 @@ export default function BroadcastStage({
   if (state === RenderState.STATS) {
     const allTributes = [...tributes_alive, ...tributes_died]
     return (
-      <div className="center-stage fullscreen-stage">
-        <div className="round-banner">
+      <div className="center-stage fullscreen-stage stage-panelled">
+        <div className="round-banner hud-panel hud-panel--round">
+          <span className="hud-panel__label">{it.hudPanelClassifica}</span>
           <h2>{title}</h2>
           <div className="round-divider" />
         </div>

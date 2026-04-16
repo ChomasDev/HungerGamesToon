@@ -21,7 +21,7 @@ function useViewportInnerWidth(): number {
   return w
 }
 
-/** Counteracts `visualViewport` pinch-zoom so trading-card layout stays closer to “1×” CSS sizing. */
+/** Counteracts `visualViewport` pinch-zoom so trading-card layout stays closer to "1×" CSS sizing. */
 function useInverseVisualViewportZoomStyle(): CSSProperties {
   const [zoom, setZoom] = useState(() => {
     if (typeof window === 'undefined') return 1
@@ -49,72 +49,90 @@ function useInverseVisualViewportZoomStyle(): CSSProperties {
 export interface TributeTradingCardFaceProps {
   tribute: Tribute
   isDead: boolean
-  /** Full: single scene. Deck: smaller card in a hand fan. */
+  /** Full: single scene. Deck: smaller card in a hand fan / side-by-side duel. */
   size?: TradingCardSize
-  /** When set, shows the yellow “move” panel. Omit for deck faces (shared narrative below). */
+  /** When set, shows the yellow "move" panel. Omit for deck faces (shared narrative below). */
   message?: FormattedMessage
   className?: string
-  /** Shorter art area for compact duel deck (fullscreen 1v1). */
-  deckArtCompact?: boolean
   /** Timed ✕ overlay for trading-style duel victim. */
   fightEliminationOverlay?: boolean
 }
 
-/** Reusable Pokémon-style card chrome (portrait + header; optional narrative block). */
+/**
+ * Reusable Pokémon-style card chrome.
+ *
+ * Design principles:
+ * - One visual language across all sizes (solo / deck / versus) — only padding,
+ *   border and font sizes scale; structure and proportions are identical.
+ * - A single art aspect ratio (5/4 landscape) at every size so the card keeps a
+ *   natural trading-card silhouette — never elongated, never hollow.
+ * - Narrative block (when present) lives *inside* the card; shared narrative
+ *   (<TradingCardSharedNarrative/>) is used when multiple cards share a scene.
+ */
 export function TributeTradingCardFace({
   tribute,
   isDead,
   size = 'full',
   message,
   className = '',
-  deckArtCompact = false,
   fightEliminationOverlay = false,
 }: TributeTradingCardFaceProps) {
   const deck = size === 'deck'
-  /** Min pixel hint for `<img>` decode; art area is driven by aspect-ratio + card width */
-  const portraitPx = deck ? 340 : 360
+  const portraitPx = deck ? 260 : 360
 
   return (
     <div
-      className={`tribute-trading-card-face ${deck ? 'w-full max-w-full' : 'w-[min(88vw,272px)] max-w-full'} ${className}`.trim()}
+      className={`tribute-trading-card-face w-full ${
+        deck ? 'max-w-full' : 'mx-auto max-w-[min(88vw,280px)]'
+      } ${className}`.trim()}
     >
       <div
-        className={`rounded-[18px] border-[3px] border-comic-ink bg-gradient-to-br from-[#fff8e7] via-[#f0d36a] to-[#c9a94a] shadow-[8px_8px_0_rgba(10,10,15,0.4)] ${deck ? 'p-1.5' : 'p-1.5'}`}
+        className={`rounded-[18px] border-[3px] border-comic-ink bg-gradient-to-br from-[#fff8e7] via-[#f0d36a] to-[#c9a94a] shadow-[6px_6px_0_rgba(10,10,15,0.4)] ${
+          deck ? 'p-1' : 'p-1.5'
+        }`}
       >
         <div
-          className={`rounded-[14px] border-[3px] border-comic-ink bg-gradient-to-b from-[#f7ecda] to-[#e8dcc8] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] ${isDead ? 'opacity-85 saturate-[0.65]' : ''} ${deck ? 'border-[3px]' : 'border-[4px]'}`}
+          className={`overflow-hidden rounded-[14px] border-[3px] border-comic-ink bg-gradient-to-b from-[#f7ecda] to-[#e8dcc8] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] ${
+            isDead ? 'opacity-90 saturate-[0.65]' : ''
+          }`}
         >
           <div
-            className={`flex items-center justify-between gap-2 border-b-4 border-comic-ink bg-gradient-to-r from-[#4a6fb5] via-[#3d5a9e] to-[#2e4785] ${deck ? 'px-2 py-1.5' : 'px-2.5 py-2'}`}
+            className={`flex items-center justify-between gap-2 border-b-[3px] border-comic-ink bg-gradient-to-r from-[#4a6fb5] via-[#3d5a9e] to-[#2e4785] ${
+              deck ? 'px-2 py-1.5' : 'px-2.5 py-2'
+            }`}
           >
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p
-                className={`font-display uppercase leading-none tracking-[0.2em] text-[rgba(255,255,255,0.85)] ${deck ? 'text-[8px]' : 'text-[9px]'}`}
+                className={`font-display uppercase leading-none tracking-[0.2em] text-white/80 ${
+                  deck ? 'text-[7px]' : 'text-[9px]'
+                }`}
               >
                 {it.tradingCardKind}
               </p>
               <h2
-                className={`mt-0.5 truncate font-display uppercase leading-tight tracking-wide text-white [text-shadow:2px_2px_0_var(--comic-ink)] ${deck ? 'text-[clamp(0.75rem,3vw,1rem)]' : 'text-[clamp(1rem,3.5vw,1.2rem)]'}`}
+                className={`mt-0.5 truncate font-display uppercase leading-tight tracking-wide text-white [text-shadow:2px_2px_0_var(--comic-ink)] ${
+                  deck
+                    ? 'text-[clamp(0.72rem,2.4vw,0.95rem)]'
+                    : 'text-[clamp(0.95rem,3vw,1.15rem)]'
+                }`}
               >
                 {tribute.raw_name}
               </h2>
             </div>
             <div
-              className={`shrink-0 rounded-md border-[2px] border-comic-ink bg-comic-paper text-center font-display font-bold leading-none text-comic-ink shadow-[2px_2px_0_var(--comic-ink)] ${deck ? 'px-1.5 py-0.5 text-[11px]' : 'border-[3px] px-1.5 py-0.5 text-[12px]'}`}
+              className={`shrink-0 rounded-md border-[2px] border-comic-ink bg-comic-paper text-center font-display font-bold leading-none text-comic-ink shadow-[2px_2px_0_var(--comic-ink)] ${
+                deck ? 'px-1.5 py-0.5 text-[10px]' : 'px-1.5 py-1 text-[12px]'
+              }`}
             >
               {it.tradingCardStars(tribute.kills)}
             </div>
           </div>
 
-          <div className={deck ? 'relative px-2.5 pb-0.5 pt-2.5' : 'relative px-2.5 pb-0.5 pt-2'}>
+          <div className={deck ? 'p-1.5' : 'p-2'}>
             <div
-              className={`relative w-full overflow-hidden rounded-xl border-[3px] border-comic-ink bg-gradient-to-b from-[#b8cfe8] via-[#e8eef5] to-[#f0f4fa] shadow-[inset_0_3px_12px_rgba(10,10,15,0.12),0_2px_0_rgba(255,255,255,0.5)] ${
-                deck
-                  ? deckArtCompact
-                    ? 'aspect-[3/4] min-h-[112px] max-h-[min(22vh,156px)]'
-                    : 'aspect-[3/4] min-h-0'
-                  : 'aspect-auto h-[min(20vh,148px)] min-h-[96px]'
-              } ${isDead ? 'grayscale-[0.35]' : ''}`}
+              className={`relative aspect-[5/4] w-full overflow-hidden rounded-xl border-[3px] border-comic-ink bg-gradient-to-b from-[#b8cfe8] via-[#e8eef5] to-[#f0f4fa] shadow-[inset_0_3px_10px_rgba(10,10,15,0.12),0_2px_0_rgba(255,255,255,0.5)] ${
+                isDead ? 'grayscale-[0.4]' : ''
+              }`}
             >
               <ArenaPortrait
                 src={tribute.image_src}
@@ -131,9 +149,9 @@ export function TributeTradingCardFace({
           </div>
 
           {message && (
-            <div className={deck ? 'p-2 pt-1.5' : 'p-2 pt-1.5'}>
+            <div className="px-2 pb-2 pt-0.5">
               <div className="trading-card-narrative rounded-lg border-[3px] border-comic-ink bg-gradient-to-b from-[#fef9c3] via-[#fef08a] to-[#fde047] px-2.5 py-2 shadow-[inset_0_2px_0_rgba(255,255,255,0.55),3px_3px_0_rgba(10,10,15,0.12)]">
-                <div className="mb-1 inline-block rounded border-2 border-comic-ink bg-comic-paper px-1.5 py-0.5 font-display text-[8px] uppercase tracking-[0.15em] text-comic-ink">
+                <div className="mb-1 inline-block rounded border-[2px] border-comic-ink bg-comic-paper px-1.5 py-0.5 font-display text-[8px] uppercase tracking-[0.15em] text-comic-ink">
                   {it.ccgPower}
                 </div>
                 <FormattedEventMessage
@@ -176,15 +194,15 @@ export default function TributeTradingCard({ tribute, isDead, message }: Tribute
 
 export function TradingCardSharedNarrative({ message }: { message: FormattedMessage }) {
   return (
-    <div className="relative z-[24] mx-auto mt-4 w-full max-w-[min(92vw,520px)] px-2">
-      <div className="trading-card-narrative rounded-lg border-[3px] border-comic-ink bg-gradient-to-b from-[#fef9c3] via-[#fef08a] to-[#fde047] px-3 py-3 shadow-[inset_0_2px_0_rgba(255,255,255,0.55),3px_3px_0_rgba(10,10,15,0.12)]">
-        <div className="mb-1.5 inline-block rounded border-2 border-comic-ink bg-comic-paper px-2 py-0.5 font-display text-[9px] uppercase tracking-[0.15em] text-comic-ink">
+    <div className="trading-card-narrative-wrapper relative z-[24] mx-auto mt-2 w-full max-w-[min(92vw,36rem)] px-2">
+      <div className="trading-card-narrative rounded-lg border-[3px] border-comic-ink bg-gradient-to-b from-[#fef9c3] via-[#fef08a] to-[#fde047] px-3 py-2 shadow-[inset_0_2px_0_rgba(255,255,255,0.55),3px_3px_0_rgba(10,10,15,0.12)]">
+        <div className="mb-1 inline-block rounded border-[2px] border-comic-ink bg-comic-paper px-1.5 py-0.5 font-display text-[8px] uppercase tracking-[0.15em] text-comic-ink">
           {it.ccgPower}
         </div>
         <FormattedEventMessage
           message={message}
           large={false}
-          className="trading-card-narrative-text !text-[clamp(0.88rem,2.8vw,1.05rem)] !font-semibold !italic !leading-relaxed !tracking-wide !text-[#1e1a14] ![font-family:var(--font-body)] ![text-transform:none]"
+          className="trading-card-narrative-text !text-[clamp(0.78rem,2.2vw,0.95rem)] !font-semibold !italic !leading-snug !tracking-normal !text-[#1e1a14] ![font-family:var(--font-body)] ![text-transform:none]"
         />
       </div>
     </div>
@@ -206,35 +224,32 @@ export function TributeTradingCardDeck({ tributes, isDeadAtIndex, message }: Tri
   const inverseZoom = useInverseVisualViewportZoomStyle()
   const vw = useViewportInnerWidth()
   const n = tributes.length
-  const maxRot = n <= 1 ? 0 : Math.min(11, 4 + (n - 1) * 50)
-  /** Horizontal distance between card pivots (~half appears as each card’s offset from center). */
+
+  /** Max fan angle — gentle for pairs, wider for larger hands. */
+  const maxRot = n <= 1 ? 0 : Math.min(10, 3 + (n - 1) * 2.2)
+
+  /** Card width scales with viewport but clamps for big screens and readability. */
+  const MAX_DECK_CARD_PX = 208
+  const MIN_DECK_CARD_PX = 96
+  const vwFrac = n >= 4 ? 0.13 : n === 3 ? 0.155 : n === 2 ? 0.17 : 0.2
+  const deckCardWidth = Math.round(
+    Math.min(MAX_DECK_CARD_PX, Math.max(MIN_DECK_CARD_PX, vw * vwFrac)),
+  )
+
+  /** Horizontal distance between card pivots; scaled so the fan stays visible on narrow viewports. */
+  const layoutScale = Math.min(1, Math.max(0.4, (vw - 40) / 640))
   const spreadBase =
-    n <= 1
-      ? 0
-      : n === 2
-        ? Math.min(168, 88 + 120)
-        : Math.min(220, 96 + (n - 1) * 160)
-  /** Tighten fan on narrow widths so cards stay visible without eating the whole viewport */
-  const layoutScale = Math.min(1, Math.max(0.35, (vw - 20) / 520))
+    n <= 1 ? 0 : Math.min(deckCardWidth * 1.1, deckCardWidth * 0.55 + (n - 1) * 42)
   const spreadX = spreadBase * layoutScale
 
-  /** Hard cap keeps multi-card scenes readable on large monitors (vw alone still hit 328px). */
-  const MAX_DECK_CARD_PX = 220
-  const vwFrac =
-    n >= 4 ? 0.132 : n === 3 ? 0.158 : n === 2 ? 0.168 : 0.185
-  const deckCardWidth = Math.round(
-    Math.min(MAX_DECK_CARD_PX, Math.max(68, vw * vwFrac)),
-  )
-
-  const deckMinHeight = Math.min(
-    400,
-    Math.max(120, deckCardWidth * (n >= 3 ? 1.85 : 2.0)),
-  )
+  /** With aspect-[5/4] art + header + padding the card is ≈ 1.35× as tall as wide. */
+  const approxCardHeight = Math.round(deckCardWidth * 1.35 + 40)
+  const deckMinHeight = Math.min(360, Math.max(170, approxCardHeight + 12))
 
   return (
     <div className="tribute-trading-card-deck flex w-full flex-col items-center">
       <div
-        className="relative z-[1] mx-auto w-full max-w-[min(100%,84rem)] px-2 sm:px-4"
+        className="relative z-[1] mx-auto w-full max-w-[min(100%,40rem)] px-2 sm:px-4"
         style={{ minHeight: deckMinHeight, ...inverseZoom }}
       >
         {tributes.map((tribute, i) => {
@@ -280,8 +295,10 @@ export interface TributeTradingVersusFightProps {
 }
 
 /**
- * Fullscreen 1v1: trading-card chrome, **inline** (side-by-side) with VS, plus duel motion
- * (dash-in, lunge / stagger / recoil, timed ✕) — not an overlapping deck.
+ * Fullscreen 1v1: trading-card chrome side-by-side with VS badge, plus duel
+ * motion (dash-in, lunge / stagger / recoil, timed ✕).
+ * Both cards use the exact same face component & size as the deck, so solo /
+ * deck / versus always read as the same visual system.
  */
 export function TributeTradingVersusFight({ killer, victim, message, animKey }: TributeTradingVersusFightProps) {
   const reduceMotion = useReducedMotion()
@@ -290,12 +307,12 @@ export function TributeTradingVersusFight({ killer, victim, message, animKey }: 
   return (
     <div className="tribute-trading-versus flex w-full flex-col items-center px-1">
       <div
-        className="mx-auto flex w-full max-w-[min(100%,56rem)] flex-nowrap items-center justify-center gap-[clamp(6px,2.2vmin,22px)] overflow-x-auto py-3 [-webkit-overflow-scrolling:touch]"
+        className="mx-auto flex w-full max-w-[min(100%,52rem)] flex-nowrap items-center justify-center gap-[clamp(8px,2.4vmin,22px)] overflow-x-auto py-3 [-webkit-overflow-scrolling:touch]"
         style={inverseZoom}
       >
         <motion.div
           key={`${animKey}-killer`}
-          className="w-[min(36vw,240px)] max-w-[240px] shrink-0"
+          className="w-[min(40vw,220px)] shrink-0"
           style={{ transformOrigin: '50% 65%' }}
           initial={reduceMotion ? { opacity: 0 } : { x: -120, y: 28, opacity: 0, rotateZ: -8, scale: 0.86 }}
           animate={
@@ -319,11 +336,11 @@ export function TributeTradingVersusFight({ killer, victim, message, animKey }: 
                 }
           }
         >
-          <TributeTradingCardFace tribute={killer} isDead={false} size="deck" deckArtCompact fightEliminationOverlay={false} />
+          <TributeTradingCardFace tribute={killer} isDead={false} size="deck" />
         </motion.div>
 
         <motion.div
-          className="shrink-0 scale-[0.88] max-[420px]:scale-[0.82]"
+          className="shrink-0 scale-[0.9] max-[420px]:scale-[0.8]"
           animate={
             reduceMotion ? undefined : { rotate: [0, 0, 0, -12, 9, 0], x: [0, 0, 0, -5, 4, 0] }
           }
@@ -338,7 +355,7 @@ export function TributeTradingVersusFight({ killer, victim, message, animKey }: 
 
         <motion.div
           key={`${animKey}-victim`}
-          className="relative z-2 w-[min(36vw,240px)] max-w-[240px] shrink-0"
+          className="relative z-2 w-[min(40vw,220px)] shrink-0"
           style={{ transformOrigin: '50% 65%' }}
           initial={reduceMotion ? { opacity: 0 } : { x: 120, y: 28, opacity: 0, rotateZ: 8, scale: 0.88 }}
           animate={
@@ -363,19 +380,17 @@ export function TributeTradingVersusFight({ killer, victim, message, animKey }: 
                 }
           }
         >
-          <TributeTradingCardFace tribute={victim} isDead size="deck" deckArtCompact fightEliminationOverlay />
+          <TributeTradingCardFace tribute={victim} isDead size="deck" fightEliminationOverlay />
         </motion.div>
       </div>
       {reduceMotion ? (
-        <div className="mt-2 w-full">
-          <TradingCardSharedNarrative message={message} />
-        </div>
+        <TradingCardSharedNarrative message={message} />
       ) : (
         <motion.div
-          className="mt-2 w-full"
-          initial={{ opacity: 0, y: 20, rotateZ: -0.4 }}
-          animate={{ opacity: 1, y: 0, rotateZ: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ delay: 0.8, duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full"
         >
           <TradingCardSharedNarrative message={message} />
         </motion.div>

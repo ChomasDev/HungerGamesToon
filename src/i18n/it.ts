@@ -31,6 +31,19 @@ export const it = {
   abort: 'Abbandona',
 
   rosterSidebar: 'Tributi',
+  rosterAliveCount: (alive: number, total: number) => `${alive}/${total}`,
+  sidebarToggleShow: 'Mostra tributi',
+  sidebarToggleHide: 'Nascondi tributi',
+  sidebarClose: 'Chiudi',
+
+  hudPanelStatus: 'Stato',
+  hudPanelRun: 'Riproduzione',
+  hudPanelMatch: 'Partita',
+  hudPanelRound: 'Round',
+  hudPanelScene: 'Scena',
+  hudPanelCaduti: 'Caduti',
+  hudPanelVincitori: 'Vincitori',
+  hudPanelClassifica: 'Classifica',
 
   controlNext: '▶ Avanti',
   controlPause: '⏸ Pausa',

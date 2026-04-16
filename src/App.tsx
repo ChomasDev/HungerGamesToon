@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import './App.css'
 import { RenderState, resolvedKillerIndices, type Tribute } from './engine/types'
 import { clearLocalGameDb, loadPersistedAppState, savePersistedAppState } from './db/localGameDb'
+import { translateGameTitle } from './i18n/it'
 import { useGameStore, type GameSettings, type ThemeConfig } from './store/gameStore'
 import TopBar from './components/TopBar'
 import RosterBuilder from './components/RosterBuilder'
@@ -11,11 +12,46 @@ import ControlRail from './components/ControlRail'
 import ResultsScreen from './components/ResultsScreen'
 import CustomizationDrawer from './components/CustomizationDrawer'
 
+const SIDEBAR_OPEN_KEY = 'hg.sidebarOpen'
+const WIDE_VIEWPORT_QUERY = '(min-width: 1100px)'
+const NARROW_VIEWPORT_QUERY = '(max-width: 699px)'
+
+function readInitialSidebarOpen(): boolean {
+  if (typeof window === 'undefined') return true
+  const stored = window.localStorage.getItem(SIDEBAR_OPEN_KEY)
+  if (stored === '1') return true
+  if (stored === '0') return false
+  return window.matchMedia(WIDE_VIEWPORT_QUERY).matches
+}
+
 function App() {
   const { state, dispatch } = useGameStore()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [persistReady, setPersistReady] = useState(false)
   const [roundEventIndex, setRoundEventIndex] = useState(0)
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(readInitialSidebarOpen)
+  const [isNarrowViewport, setIsNarrowViewport] = useState<boolean>(() =>
+    typeof window === 'undefined' ? false : window.matchMedia(NARROW_VIEWPORT_QUERY).matches,
+  )
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDEBAR_OPEN_KEY, sidebarOpen ? '1' : '0')
+    } catch {
+      /* ignore quota / privacy errors */
+    }
+  }, [sidebarOpen])
+
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW_VIEWPORT_QUERY)
+    const onChange = (e: MediaQueryListEvent) => setIsNarrowViewport(e.matches)
+    setIsNarrowViewport(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  const toggleSidebar = useCallback(() => setSidebarOpen((v) => !v), [])
+  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
   const autoPlayRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const roundEventIndexRef = useRef(0)
   roundEventIndexRef.current = roundEventIndex
@@ -221,8 +257,18 @@ function App() {
     return { rosterAlive: alive, rosterKillSubtrahend }
   }, [state.renderState, roundEventIndex])
 
-  const hideControlPrimaryDuringRound =
-    state.renderState?.state === RenderState.ROUND_EVENTS && !state.isAutoPlaying
+  /** Top-bar phase title + counter (ROUND_EVENTS only); moved out of the stage so the center shows just the card. */
+  const phaseTitle =
+    state.screen === 'game' && state.renderState?.state === RenderState.ROUND_EVENTS
+      ? translateGameTitle(state.renderState.game_title)
+      : undefined
+  const phaseCounterLabel = (() => {
+    if (state.screen !== 'game') return undefined
+    if (state.renderState?.state !== RenderState.ROUND_EVENTS) return undefined
+    const curr = state.renderState.rounds[state.renderState.rounds.length - 1]
+    const n = curr?.game_events.length ?? 0
+    return n === 0 ? '—' : `${Math.min(roundEventIndex, n - 1) + 1} / ${n}`
+  })()
 
   return (
     <div
@@ -240,6 +286,10 @@ function App() {
         onSettingsClick={() => setDrawerOpen(true)}
         onAbort={handleAbort}
         showGameControls={state.screen === 'game'}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={toggleSidebar}
+        phaseTitle={phaseTitle}
+        phaseCounterLabel={phaseCounterLabel}
       />
 
       {state.screen === 'lobby' && (
@@ -260,12 +310,30 @@ function App() {
       )}
 
       {state.screen === 'game' && state.renderState && state.game && (
-        <div className="game-layout">
-          <RosterSidebar
-            allTributes={state.game.tributes}
-            alive={rosterAlive}
-            killCountSubtrahend={rosterKillSubtrahend}
-          />
+        <div
+          className="game-layout"
+          data-sidebar={sidebarOpen ? 'open' : 'closed'}
+          data-viewport={isNarrowViewport ? 'narrow' : 'wide'}
+        >
+          {isNarrowViewport ? (
+            <RosterSidebar
+              allTributes={state.game.tributes}
+              alive={rosterAlive}
+              killCountSubtrahend={rosterKillSubtrahend}
+              variant="drawer"
+              isOpen={sidebarOpen}
+              onClose={closeSidebar}
+            />
+          ) : (
+            <RosterSidebar
+              allTributes={state.game.tributes}
+              alive={rosterAlive}
+              killCountSubtrahend={rosterKillSubtrahend}
+              variant={sidebarOpen ? 'full' : 'rail'}
+              isOpen
+              onClose={closeSidebar}
+            />
+          )}
           <BroadcastStage
             renderState={state.renderState}
             eventIndex={safeEventIndex}
@@ -275,12 +343,14 @@ function App() {
           />
           <ControlRail
             onProceed={handleProceed}
-            onAbort={handleAbort}
             isAutoPlaying={state.isAutoPlaying}
             autoPlaySpeed={state.autoPlaySpeed}
             onToggleAutoPlay={handleToggleAutoPlay}
             onSpeedChange={(speed) => dispatch({ type: 'SET_AUTO_PLAY', playing: state.isAutoPlaying, speed })}
-            hidePrimaryProceed={hideControlPrimaryDuringRound}
+            renderState={state.renderState}
+            eventIndex={safeEventIndex}
+            onEventIndexChange={setRoundEventIndex}
+            onAdvance={() => stepGameForward()}
           />
         </div>
       )}

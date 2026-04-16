@@ -889,6 +889,15 @@
   flex-shrink: 0;
   padding: 8px 0 4px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 50;
+  pointer-events: auto;
+}
+
+.center-stage.fullscreen-stage .event-nav-hint {
+  position: relative;
+  z-index: 50;
+  pointer-events: auto;
 }
 
 .event-nav-end-actions {
@@ -1074,6 +1083,7 @@
   border: none !important;
   box-shadow: none !important;
   align-items: center;
+  overflow: visible !important;
 }
 .arena-card.arena-card-battle.arena-card-battle-trading.arena-card-fullscreen::before {
   display: none;
@@ -1608,6 +1618,7 @@
   border: none !important;
   box-shadow: none !important;
   align-items: center;
+  overflow: visible !important;
 }
 
 .arena-solo-stage {
@@ -1690,6 +1701,7 @@
   border: none !important;
   box-shadow: none !important;
   align-items: center;
+  overflow: visible !important;
 }
 .arena-card.arena-card-standard.arena-card-standard-trading.arena-card-fullscreen .arena-card-stripe {
   display: none;
@@ -1700,6 +1712,7 @@
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  overflow: visible !important;
 }
 
 /* Yellow “move” panel: names must stay readable (avoid raw red on yellow) */

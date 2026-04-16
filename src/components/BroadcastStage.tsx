@@ -115,7 +115,7 @@ export default function BroadcastStage({
         </div>
 
         {currentEvent && onUpdateSceneNarrative && (
-          <div className="scene-edit-toolbar">
+          <div className="scene-edit-toolbar hidden" aria-hidden>
             <button type="button" className="btn btn-secondary scene-edit-open-btn" onClick={() => setEditModalOpen(true)}>
               {it.editSceneAction}
             </button>

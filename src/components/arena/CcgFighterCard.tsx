@@ -37,7 +37,7 @@ export default function CcgFighterCard({
             ? 'bg-linear-to-br from-[#f0f7ff] from-0% via-[#d4e8ff] via-35% to-[#a8d4ff] to-100% [box-shadow:9px_9px_0_rgba(10,10,15,0.4),inset_0_2px_0_rgba(255,255,255,0.65),inset_0_-5px_0_rgba(30,90,180,0.14)]'
             : 'bg-linear-to-br from-[#fff8ed] from-0% via-[#ffecd4] via-40% to-[#ffd6a8] to-100% [box-shadow:9px_9px_0_rgba(10,10,15,0.4),inset_0_2px_0_rgba(255,255,255,0.85),inset_0_-5px_0_rgba(255,140,60,0.16)]'
         } `}
-      style={{ width: cardWidth ?? 'min(88vw, 328px)' }}
+      style={{ width: cardWidth ?? 'min(88vw, 220px)' }}
       initial={
         reduceMotion
           ? { opacity: 0 }

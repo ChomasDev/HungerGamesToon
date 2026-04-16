@@ -1,3 +1,4 @@
+import { useEffect, useState, type CSSProperties } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import type { FormattedMessage, Tribute } from '../../engine/types'
 import { it } from '../../i18n/it'
@@ -6,6 +7,44 @@ import FormattedEventMessage from './FormattedEventMessage'
 import VersusBadge from './VersusBadge'
 
 export type TradingCardSize = 'full' | 'deck'
+
+function useViewportInnerWidth(): number {
+  const [w, setW] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1024,
+  )
+  useEffect(() => {
+    const onResize = () => setW(window.innerWidth)
+    onResize()
+    window.addEventListener('resize', onResize, { passive: true })
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  return w
+}
+
+/** Counteracts `visualViewport` pinch-zoom so trading-card layout stays closer to “1×” CSS sizing. */
+function useInverseVisualViewportZoomStyle(): CSSProperties {
+  const [zoom, setZoom] = useState(() => {
+    if (typeof window === 'undefined') return 1
+    const s = window.visualViewport?.scale
+    return s != null && s > 0 ? 1 / s : 1
+  })
+  useEffect(() => {
+    const vv = window.visualViewport
+    const update = () => {
+      const s = vv?.scale
+      setZoom(s != null && s > 0 ? 1 / s : 1)
+    }
+    update()
+    if (!vv) return
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
+  return Math.abs(zoom - 1) > 0.001 ? { zoom } : {}
+}
 
 export interface TributeTradingCardFaceProps {
   tribute: Tribute
@@ -37,7 +76,7 @@ export function TributeTradingCardFace({
 
   return (
     <div
-      className={`tribute-trading-card-face ${deck ? 'w-full max-w-[min(88vw,328px)]' : 'w-[min(92vw,392px)] max-w-full'} ${className}`.trim()}
+      className={`tribute-trading-card-face ${deck ? 'w-full max-w-full' : 'w-[min(88vw,272px)] max-w-full'} ${className}`.trim()}
     >
       <div
         className={`rounded-[18px] border-[3px] border-comic-ink bg-gradient-to-br from-[#fff8e7] via-[#f0d36a] to-[#c9a94a] shadow-[8px_8px_0_rgba(10,10,15,0.4)] ${deck ? 'p-1.5' : 'p-1.5'}`}
@@ -73,8 +112,8 @@ export function TributeTradingCardFace({
                 deck
                   ? deckArtCompact
                     ? 'aspect-[3/4] min-h-[112px] max-h-[min(22vh,156px)]'
-                    : 'aspect-[3/4] min-h-[168px]'
-                  : 'aspect-auto h-[min(26vh,188px)] min-h-[120px]'
+                    : 'aspect-[3/4] min-h-0'
+                  : 'aspect-auto h-[min(20vh,148px)] min-h-[96px]'
               } ${isDead ? 'grayscale-[0.35]' : ''}`}
             >
               <ArenaPortrait
@@ -120,10 +159,12 @@ export interface TributeTradingCardProps {
 /** Single fullscreen scene: one card with entrance motion and narrative on-card. */
 export default function TributeTradingCard({ tribute, isDead, message }: TributeTradingCardProps) {
   const reduceMotion = useReducedMotion()
+  const inverseZoom = useInverseVisualViewportZoomStyle()
 
   return (
     <motion.div
       className="flex flex-col items-center px-2"
+      style={inverseZoom}
       initial={reduceMotion ? undefined : { opacity: 0, y: 28, rotateZ: -2 }}
       animate={{ opacity: 1, y: 0, rotateZ: 0 }}
       transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
@@ -135,7 +176,7 @@ export default function TributeTradingCard({ tribute, isDead, message }: Tribute
 
 export function TradingCardSharedNarrative({ message }: { message: FormattedMessage }) {
   return (
-    <div className="mx-auto mt-2 w-full max-w-[min(92vw,520px)] px-2">
+    <div className="relative z-[24] mx-auto mt-4 w-full max-w-[min(92vw,520px)] px-2">
       <div className="trading-card-narrative rounded-lg border-[3px] border-comic-ink bg-gradient-to-b from-[#fef9c3] via-[#fef08a] to-[#fde047] px-3 py-3 shadow-[inset_0_2px_0_rgba(255,255,255,0.55),3px_3px_0_rgba(10,10,15,0.12)]">
         <div className="mb-1.5 inline-block rounded border-2 border-comic-ink bg-comic-paper px-2 py-0.5 font-display text-[9px] uppercase tracking-[0.15em] text-comic-ink">
           {it.ccgPower}
@@ -162,31 +203,51 @@ export interface TributeTradingCardDeckProps {
  */
 export function TributeTradingCardDeck({ tributes, isDeadAtIndex, message }: TributeTradingCardDeckProps) {
   const reduceMotion = useReducedMotion()
+  const inverseZoom = useInverseVisualViewportZoomStyle()
+  const vw = useViewportInnerWidth()
   const n = tributes.length
   const maxRot = n <= 1 ? 0 : Math.min(11, 4 + (n - 1) * 50)
   /** Horizontal distance between card pivots (~half appears as each card’s offset from center). */
-  const spreadX = n <= 1 ? 0 : Math.min(240, 112 + (n - 1) * 200)
+  const spreadBase =
+    n <= 1
+      ? 0
+      : n === 2
+        ? Math.min(168, 88 + 120)
+        : Math.min(220, 96 + (n - 1) * 160)
+  /** Tighten fan on narrow widths so cards stay visible without eating the whole viewport */
+  const layoutScale = Math.min(1, Math.max(0.35, (vw - 20) / 520))
+  const spreadX = spreadBase * layoutScale
 
-  const deckMinH =
-    n === 2
-      ? 'min-h-[min(56vh,440px)]'
-      : n >= 4
-        ? 'min-h-[min(64vh,560px)]'
-        : 'min-h-[min(60vh,500px)]'
+  /** Hard cap keeps multi-card scenes readable on large monitors (vw alone still hit 328px). */
+  const MAX_DECK_CARD_PX = 220
+  const vwFrac =
+    n >= 4 ? 0.132 : n === 3 ? 0.158 : n === 2 ? 0.168 : 0.185
+  const deckCardWidth = Math.round(
+    Math.min(MAX_DECK_CARD_PX, Math.max(68, vw * vwFrac)),
+  )
+
+  const deckMinHeight = Math.min(
+    400,
+    Math.max(120, deckCardWidth * (n >= 3 ? 1.85 : 2.0)),
+  )
 
   return (
     <div className="tribute-trading-card-deck flex w-full flex-col items-center">
-      <div className={`relative mx-auto w-full max-w-[min(100%,84rem)] px-4 ${deckMinH}`}>
+      <div
+        className="relative z-[1] mx-auto w-full max-w-[min(100%,84rem)] px-2 sm:px-4"
+        style={{ minHeight: deckMinHeight, ...inverseZoom }}
+      >
         {tributes.map((tribute, i) => {
           const angle = n === 1 ? 0 : -maxRot + (maxRot * 2 * i) / (n - 1)
           const xOffset = n === 1 ? 0 : (i - (n - 1) / 2) * spreadX
           return (
             <motion.div
               key={`${tribute.raw_name}-${i}`}
-              className="absolute bottom-0 left-1/2 w-[min(78vw,328px)] max-w-[328px] -translate-x-1/2"
+              className="absolute bottom-0 left-1/2 max-w-full -translate-x-1/2"
               style={{
                 transformOrigin: '50% 100%',
                 zIndex: i + 1,
+                width: deckCardWidth,
               }}
               initial={
                 reduceMotion
@@ -224,13 +285,17 @@ export interface TributeTradingVersusFightProps {
  */
 export function TributeTradingVersusFight({ killer, victim, message, animKey }: TributeTradingVersusFightProps) {
   const reduceMotion = useReducedMotion()
+  const inverseZoom = useInverseVisualViewportZoomStyle()
 
   return (
     <div className="tribute-trading-versus flex w-full flex-col items-center px-1">
-      <div className="mx-auto flex w-full max-w-[min(100%,56rem)] flex-nowrap items-center justify-center gap-[clamp(6px,2.2vmin,22px)] overflow-x-auto py-3 [-webkit-overflow-scrolling:touch]">
+      <div
+        className="mx-auto flex w-full max-w-[min(100%,56rem)] flex-nowrap items-center justify-center gap-[clamp(6px,2.2vmin,22px)] overflow-x-auto py-3 [-webkit-overflow-scrolling:touch]"
+        style={inverseZoom}
+      >
         <motion.div
           key={`${animKey}-killer`}
-          className="w-[min(42vw,300px)] max-w-[300px] shrink-0"
+          className="w-[min(36vw,240px)] max-w-[240px] shrink-0"
           style={{ transformOrigin: '50% 65%' }}
           initial={reduceMotion ? { opacity: 0 } : { x: -120, y: 28, opacity: 0, rotateZ: -8, scale: 0.86 }}
           animate={
@@ -273,7 +338,7 @@ export function TributeTradingVersusFight({ killer, victim, message, animKey }: 
 
         <motion.div
           key={`${animKey}-victim`}
-          className="relative z-2 w-[min(42vw,300px)] max-w-[300px] shrink-0"
+          className="relative z-2 w-[min(36vw,240px)] max-w-[240px] shrink-0"
           style={{ transformOrigin: '50% 65%' }}
           initial={reduceMotion ? { opacity: 0 } : { x: 120, y: 28, opacity: 0, rotateZ: 8, scale: 0.88 }}
           animate={

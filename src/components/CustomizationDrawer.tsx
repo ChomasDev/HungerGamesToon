@@ -141,25 +141,44 @@ export default function CustomizationDrawer({
         </div>
 
         {gameSettings.killsPerRoundMode === 'random' && (
-          <div className="drawer-section">
-            <label>
-              {it.maxDeathsPerPhase}:{' '}
-              {gameSettings.randomRoundDeathCap === 0 ? it.unlimited : gameSettings.randomRoundDeathCap}
-            </label>
-            <input
-              type="range"
-              min={0}
-              max={20}
-              step={1}
-              value={gameSettings.randomRoundDeathCap}
-              onChange={(e) => onGameSettingsChange({ randomRoundDeathCap: Number(e.target.value) })}
-            />
-            <div className="range-labels">
-              <span>{it.range0off}</span>
-              <span>10</span>
-              <span>20</span>
+          <>
+            <div className="drawer-section">
+              <label>
+                {it.maxDeathsPerPhase}:{' '}
+                {gameSettings.randomRoundDeathCap === 0 ? it.unlimited : gameSettings.randomRoundDeathCap}
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={20}
+                step={1}
+                value={gameSettings.randomRoundDeathCap}
+                onChange={(e) => onGameSettingsChange({ randomRoundDeathCap: Number(e.target.value) })}
+              />
+              <div className="range-labels">
+                <span>{it.range0off}</span>
+                <span>10</span>
+                <span>20</span>
+              </div>
             </div>
-          </div>
+            <div className="drawer-section">
+              <label>{it.lethalRerollRate(gameSettings.lethalEventRerollRate)}</label>
+              <span className="drawer-hint">{it.lethalRerollHint}</span>
+              <input
+                type="range"
+                min={0}
+                max={90}
+                step={5}
+                value={gameSettings.lethalEventRerollRate}
+                onChange={(e) => onGameSettingsChange({ lethalEventRerollRate: Number(e.target.value) })}
+              />
+              <div className="range-labels">
+                <span>0%</span>
+                <span>45%</span>
+                <span>90%</span>
+              </div>
+            </div>
+          </>
         )}
 
         {gameSettings.killsPerRoundMode === 'exact' && (

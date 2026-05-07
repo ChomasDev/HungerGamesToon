@@ -67,11 +67,11 @@ export const it = {
   killModeExact: 'Numero fisso',
   killModeRange: 'Intervallo casuale',
   killHintRandom:
-    'Il limite qui sotto vale per ogni singola fase (giorno, notte, bagno di sangue, banchetto) e conta gli eventi mortali, non il numero di vittime. 0 = nessun limite.',
+    'Il limite qui sotto vale per ogni singola fase (giorno, notte, bagno di sangue, banchetto) e conta le scene letali, non il numero di vittime. 0 = nessun limite.',
   killHintExact:
-    'Ogni singola fase puo avere fino a questo numero di eventi mortali (un evento con 2 morti conta comunque 1).',
+    'Ogni singola fase prova a piazzare esattamente questo numero di scene letali, distribuite lungo la fase. Una scena con 2 morti conta comunque 1.',
   killHintRange:
-    'Ogni singola fase puo avere un numero casuale di eventi mortali tra min e max (ogni evento letale conta 1).',
+    'Per ogni fase si sorteggia un numero T tra min e max: la fase prova ad avere T scene letali distribuite lungo la fase, finche il pool di eventi e i tributi lo consentono.',
   maxDeathsPerPhase: 'Max eventi mortali per fase',
   unlimited: 'Illimitato',
   deathsPerRound: (n: number) => `Eventi mortali per fase: ${n}`,
@@ -79,9 +79,12 @@ export const it = {
   maxDeaths: (n: number) => `Eventi mortali max: ${n}`,
   eventsPerPhaseTitle: 'Scene per fase (numero casuale)',
   eventsPerPhaseHint:
-    'Ogni fase mostra un numero casuale di scene tra min e max, ma se serve continua finche tutti i tributi vivi fanno almeno un\'azione.',
+    'Ogni fase usa questo valore per pianificare la durata e distribuire gli eventi mortali; se serve continua finche tutti i tributi vivi fanno almeno un\'azione.',
   eventsPerPhaseMin: (n: number) => `Min. scene: ${n}`,
   eventsPerPhaseMax: (n: number) => `Max scene: ${n}`,
+  lethalRerollRate: (n: number) => `Filtro eventi mortali casuali: ${n}%`,
+  lethalRerollHint:
+    'Solo in modalita completamente casuale: percentuale di scene in cui il motore prova a preferire un evento non letale. Abbassala per vedere piu eventi mortali naturali.',
   range0off: '0 — disattivo',
   close: 'Chiudi',
   drawerPersistHint:

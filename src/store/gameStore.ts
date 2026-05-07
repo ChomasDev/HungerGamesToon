@@ -42,6 +42,8 @@ export interface GameSettings {
   /** Random inclusive bounds for base scene count per phase; more scenes may be added so everyone appears. */
   eventsPerPhaseMin: number
   eventsPerPhaseMax: number
+  /** Chance from 0 to 100 to skip lethal events during fully random picks. */
+  lethalEventRerollRate: number
 }
 
 export interface GameStore {
@@ -120,6 +122,7 @@ export function createInitialGameStore(): GameStore {
       randomRoundDeathCap: 5,
       eventsPerPhaseMin: 4,
       eventsPerPhaseMax: 10,
+      lethalEventRerollRate: 35,
     },
   }
 }
@@ -233,6 +236,7 @@ function gameReducer(state: GameStore, action: GameAction): GameStore {
         randomModeDeathCap: state.gameSettings.randomRoundDeathCap,
         eventsPerPhaseMin: state.gameSettings.eventsPerPhaseMin,
         eventsPerPhaseMax: state.gameSettings.eventsPerPhaseMax,
+        fatalityRerollRate: state.gameSettings.lethalEventRerollRate / 100,
       }
       const game = new Game(tributeResult, eventList, undefined, killLimit)
       const renderState = game.advanceGame()

@@ -51,6 +51,7 @@ function simWarn(...args: unknown[]) {
 export interface KillLimitConfig {
   mode: 'random' | 'exact' | 'range'
   value: number
+  /** range mode: inclusive bounds for rolling how many lethal events this phase must reach */
   min: number
   max: number
   /** When mode is random: hard cap on deaths this phase; 0 = no cap */
@@ -58,6 +59,8 @@ export interface KillLimitConfig {
   /** Each phase ends after this many scenes (random between min and max inclusive). */
   eventsPerPhaseMin?: number
   eventsPerPhaseMax?: number
+  /** Chance to suppress lethal events in fully random picks; 0 = no suppression. */
+  fatalityRerollRate?: number
 }
 
 const char_zero = '0'.charCodeAt(0)
@@ -80,6 +83,73 @@ function shuffle<T>(array: T[]): T[] {
     array[j] = k
   }
   return array
+}
+
+type EventPickIntent = 'any' | 'lethal' | 'nonlethal'
+
+function clampRate(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return Math.max(0, Math.min(value, 1))
+}
+
+function eventGroupKey(event: Event): string {
+  return [
+    event.message.trim().replace(/\s+/g, ' '),
+    event.players_involved,
+    event.fatalities.join(','),
+    event.killers.join(','),
+    event.type,
+  ].join('\x1f')
+}
+
+function pickUniformEventGroup(events: Event[]): Event {
+  const groups = new Map<string, Event[]>()
+  for (const event of events) {
+    const key = eventGroupKey(event)
+    const group = groups.get(key)
+    if (group) group.push(event)
+    else groups.set(key, [event])
+  }
+  const grouped = Array.from(groups.values())
+  const group = grouped[random(0, grouped.length)]
+  return group[random(0, group.length)]
+}
+
+function rollDistributedSlots(count: number, plannedSceneCount: number, tributeCount: number): Set<number> {
+  const slots = new Set<number>()
+  if (count <= 0 || plannedSceneCount <= 0) return slots
+
+  const desiredSceneCount = tributeCount > count
+    ? Math.max(plannedSceneCount, count + 1)
+    : plannedSceneCount
+  const reachableSceneCount = Math.max(count, Math.min(desiredSceneCount, tributeCount))
+  const minimumWindow = reachableSceneCount > count ? count + 1 : count
+  const nonTailWindow = Math.max(minimumWindow, Math.ceil(reachableSceneCount * 0.85))
+  const candidates = Array.from({ length: nonTailWindow }, (_, i) => i)
+  if (count / nonTailWindow >= 0.6 && count < nonTailWindow) {
+    const gaps = new Set<number>()
+    const gapCount = nonTailWindow - count
+    for (let i = 0; i < gapCount; i++) {
+      const center = Math.floor(((i + 1) * nonTailWindow) / (gapCount + 1))
+      const gap = Math.max(1, Math.min(nonTailWindow - 2, center))
+      gaps.add(gap)
+    }
+    for (const slot of candidates) {
+      if (!gaps.has(slot)) slots.add(slot)
+    }
+    return slots
+  }
+
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = random(0, i + 1)
+    const tmp = candidates[i]
+    candidates[i] = candidates[j]
+    candidates[j] = tmp
+  }
+  for (let i = 0; i < Math.min(count, candidates.length); i++) {
+    slots.add(candidates[i])
+  }
+  return slots
 }
 
 function buildFallbackPhaseEvent(stage: GameStage): Event {
@@ -345,12 +415,12 @@ export class Game {
   constructor(
     tributes: Tribute[],
     events: EventList<Event>,
-    fatality_reroll_rate: number = 0.6,
+    fatality_reroll_rate: number = 0.35,
     killLimit?: KillLimitConfig,
   ) {
     this.tributes = [...tributes]
     this.tributes_alive = [...tributes]
-    this.fatality_reroll_rate = fatality_reroll_rate
+    this.fatality_reroll_rate = clampRate(killLimit?.fatalityRerollRate ?? fatality_reroll_rate)
     this.killLimit = killLimit ?? { mode: 'random', value: 1, min: 0, max: 3 }
     this.randomModeDeathCap = killLimit?.randomModeDeathCap ?? 0
     let eMin = killLimit?.eventsPerPhaseMin ?? 4
@@ -433,19 +503,26 @@ export class Game {
   }
 
   private computeKillTarget(): number {
-    const { mode, value, min, max } = this.killLimit
+    const { mode, value } = this.killLimit
     switch (mode) {
       case 'exact':
         return value
       case 'range':
-        return random(min, max + 1)
+        return -1
       case 'random':
       default:
         return -1
     }
   }
 
-  /** Lethal events allowed this phase: exact/range target, or random-mode cap; -1 = unlimited */
+  /** Rolls inclusive [min,max] lethal-event count for this phase (range mode only). */
+  private rollRangeModeLethalTarget(): number {
+    let { min, max } = this.killLimit
+    if (min > max) [min, max] = [max, min]
+    return random(min, max + 1)
+  }
+
+  /** Max lethal events this phase: exact value, random-mode cap, or -1 = unlimited (range uses per-phase roll in doRoundImpl) */
   private getDeathCapForRound(): number {
     const kt = this.computeKillTarget()
     if (kt >= 0) return kt
@@ -457,27 +534,99 @@ export class Game {
     event: Event,
     tributesLeft: number,
     lethalEventsThisRound: number,
-    deathCap: number,
+    lethalCeiling: number,
+    intent: EventPickIntent,
   ): boolean {
     if (event.players_involved > tributesLeft) return false
-    if (deathCap >= 0 && event.fatalities.length > 0) {
-      if (lethalEventsThisRound >= deathCap) return false
-    }
-    if (event.fatalities.length && Math.random() < this.fatality_reroll_rate) return false
+    const isLethal = event.fatalities.length > 0
+    if (intent === 'lethal' && !isLethal) return false
+    if (intent === 'nonlethal' && isLethal) return false
+    if (lethalCeiling >= 0 && isLethal && lethalEventsThisRound >= lethalCeiling) return false
     return true
+  }
+
+  private estimatePlannedSceneCount(eventList: Event[], tributeCount: number, targetEventCount: number): number {
+    const usable = eventList.filter((event) => event.players_involved > 0)
+    const averagePlayersInvolved = usable.length
+      ? usable.reduce((sum, event) => sum + event.players_involved, 0) / usable.length
+      : 1
+    const estimatedScenesToUseRoster = Math.ceil(tributeCount / Math.max(averagePlayersInvolved, 1))
+    return Math.max(targetEventCount, estimatedScenesToUseRoster, 1)
+  }
+
+  private pickIntentForScene(
+    sceneIndex: number,
+    tributesLeft: number,
+    phaseLethalTarget: number | null,
+    plannedSceneCount: number,
+    lethalSlots: Set<number>,
+    lethalEventsThisRound: number,
+  ): EventPickIntent {
+    if (phaseLethalTarget === null) return 'any'
+
+    const lethalLeft = phaseLethalTarget - lethalEventsThisRound
+    if (lethalLeft <= 0) return 'nonlethal'
+    if (lethalLeft >= tributesLeft) return 'lethal'
+    if (sceneIndex >= plannedSceneCount) return 'lethal'
+    if (lethalSlots.has(sceneIndex)) return 'lethal'
+
+    let remainingScheduledSlots = 0
+    lethalSlots.forEach((slot) => {
+      if (slot > sceneIndex) remainingScheduledSlots++
+    })
+    return remainingScheduledSlots < lethalLeft ? 'lethal' : 'nonlethal'
   }
 
   private pickEventForWindow(
     eventList: Event[],
     tributesLeft: number,
     lethalEventsThisRound: number,
-    deathCap: number,
+    lethalCeiling: number,
+    intent: EventPickIntent,
   ): Event | null {
-    const eligible = eventList.filter((event) =>
-      this.requirementsSatisfied(event, tributesLeft, lethalEventsThisRound, deathCap),
+    const effectiveIntent =
+      intent === 'any' && Math.random() < this.fatality_reroll_rate ? 'nonlethal' : intent
+    let eligible = eventList.filter((event) =>
+      this.requirementsSatisfied(event, tributesLeft, lethalEventsThisRound, lethalCeiling, effectiveIntent),
     )
+    if (!eligible.length && intent === 'lethal') {
+      simWarn('lethal target: no fitting lethal event; retrying without lethal-only filter')
+      eligible = eventList.filter((event) =>
+        this.requirementsSatisfied(event, tributesLeft, lethalEventsThisRound, lethalCeiling, 'any'),
+      )
+    } else if (!eligible.length && effectiveIntent === 'nonlethal' && intent === 'any') {
+      eligible = eventList.filter((event) =>
+        this.requirementsSatisfied(event, tributesLeft, lethalEventsThisRound, lethalCeiling, 'any'),
+      )
+    }
+    if (intent === 'nonlethal' && lethalCeiling >= 0) {
+      const lethalLeft = lethalCeiling - lethalEventsThisRound
+      const maxPlayersWhileReservingLethalWindows = tributesLeft - lethalLeft
+      const conservative = eligible.filter((event) =>
+        event.players_involved <= maxPlayersWhileReservingLethalWindows,
+      )
+      if (conservative.length) {
+        eligible = conservative
+      } else if (lethalLeft > 0) {
+        eligible = eventList.filter((event) =>
+          this.requirementsSatisfied(event, tributesLeft, lethalEventsThisRound, lethalCeiling, 'lethal'),
+        )
+      }
+    }
+    if (intent === 'lethal' && lethalCeiling >= 0) {
+      const lethalLeft = lethalCeiling - lethalEventsThisRound
+      const maxPlayersToStillReachTarget = tributesLeft - lethalLeft + 1
+      const conservative = eligible.filter((event) =>
+        event.fatalities.length > 0 && event.players_involved <= maxPlayersToStillReachTarget,
+      )
+      if (conservative.length) eligible = conservative
+      if (lethalLeft >= Math.ceil(tributesLeft / 2)) {
+        const minPlayers = Math.min(...eligible.map((event) => event.players_involved))
+        eligible = eligible.filter((event) => event.players_involved === minPlayers)
+      }
+    }
     if (!eligible.length) return null
-    return eligible[random(0, eligible.length)]
+    return pickUniformEventGroup(eligible)
   }
 
   private doRoundImpl() {
@@ -510,18 +659,50 @@ export class Game {
     if (!eventList.length) simDebug('phase using fallback scenes — no events for stage', this.stage, 'round#', round.index)
     let fatalitiesThisRound = 0
     let lethalEventsThisRound = 0
-    const deathCap = this.getDeathCapForRound()
+    const requestedPhaseLethalTarget =
+      this.killLimit.mode === 'range'
+        ? this.rollRangeModeLethalTarget()
+        : this.killLimit.mode === 'exact'
+          ? Math.max(0, this.killLimit.value)
+          : null
+    const phaseLethalTarget = requestedPhaseLethalTarget === null
+      ? null
+      : Math.min(requestedPhaseLethalTarget, Math.max(0, tributesAlive - 1))
+    const lethalCeiling =
+      phaseLethalTarget !== null ? phaseLethalTarget : this.getDeathCapForRound()
     const targetEventCount = random(this.eventsPerPhaseMin, this.eventsPerPhaseMax + 1)
+    const plannedSceneCount = this.estimatePlannedSceneCount(eventList, tributesLeft, targetEventCount)
+    const lethalSlots = phaseLethalTarget === null
+      ? new Set<number>()
+      : rollDistributedSlots(phaseLethalTarget, plannedSceneCount, tributesLeft)
     simDebug(`phase ${this.stage} round#${round.index}`, 'shuffle:', this.tributes_alive.map((t) => t.raw_name), {
-      deathCap,
+      lethalCeiling,
+      phaseLethalTarget,
       targetEventCount,
+      plannedSceneCount,
+      lethalSlots: Array.from(lethalSlots).sort((a, b) => a - b),
+      fatalityRerollRate: this.fatality_reroll_rate,
     })
 
     while (tributesLeft) {
       const tributes_involved: Tribute[] = []
+      const sceneIndex = round.game_events.length
+      const pickIntent = this.pickIntentForScene(
+        sceneIndex,
+        tributesLeft,
+        phaseLethalTarget,
+        plannedSceneCount,
+        lethalSlots,
+        lethalEventsThisRound,
+      )
       const event =
-        this.pickEventForWindow(eventList, tributesLeft, lethalEventsThisRound, deathCap)
-        ?? buildFallbackPhaseEvent(this.stage)
+        this.pickEventForWindow(
+          eventList,
+          tributesLeft,
+          lethalEventsThisRound,
+          lethalCeiling,
+          pickIntent,
+        ) ?? buildFallbackPhaseEvent(this.stage)
       tributesLeft -= event.players_involved
 
       const windowNames: string[] = []
